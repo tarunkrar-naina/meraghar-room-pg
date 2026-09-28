@@ -4,7 +4,7 @@ import { AdminUsersTable } from "@/components/admin/AdminUsers";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Manage Users | MeraGhar Admin",
+  title: "Manage Users",
 };
 
 export default async function AdminUsersPage() {

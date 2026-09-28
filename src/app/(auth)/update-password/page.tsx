@@ -6,7 +6,7 @@ import { UpdatePasswordForm } from "@/components/auth/UpdatePasswordForm";
 import { getAuthUser } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Update Password | MeraGhar",
+  title: "Update Password",
   description: "Set a new password for your MeraGhar account.",
 };
 

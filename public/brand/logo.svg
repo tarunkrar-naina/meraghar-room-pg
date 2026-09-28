@@ -1,0 +1,11 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512" role="img" aria-label="MeraGhar">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#0d9488"/>
+      <stop offset="1" stop-color="#0f766e"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="96" fill="url(#g)"/>
+  <path d="M256 104 112 224v168a16 16 0 0 0 16 16h72V304a24 24 0 0 1 24-24h64a24 24 0 0 1 24 24v104h72a16 16 0 0 0 16-16V224Z" fill="#ffffff"/>
+  <path d="M232 152h48v48h-48z" fill="#99f6e4"/>
+</svg>

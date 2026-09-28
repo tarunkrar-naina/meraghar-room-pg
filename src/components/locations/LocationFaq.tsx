@@ -1,6 +1,8 @@
 import { APP_NAME } from "@/lib/constants";
 import type { LocationRow } from "@/types";
 import type { LocationCategory } from "@/lib/locations/catalog";
+import { JsonLd } from "@/components/JsonLd";
+import { faqPageJsonLd } from "@/lib/locations/structured-data";
 
 interface Faq {
   question: string;
@@ -58,6 +60,7 @@ export function LocationFaq({
           </details>
         ))}
       </div>
+      <JsonLd data={faqPageJsonLd(faqs)} />
     </section>
   );
 }

@@ -4,6 +4,7 @@ import { useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { CheckCircle2, Eye, Flame, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { cn, formatINR, timeAgo } from "@/lib/utils";
+import { propertyPath } from "@/lib/urls";
 import { useToast } from "@/components/Toast";
 import {
   adminDeleteProperty,
@@ -69,7 +70,7 @@ export function AdminPropertiesTable({ rows }: { rows: AdminPropertyRow[] }) {
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-right">
                 <div className="flex flex-wrap items-center justify-end gap-1">
-                  <a href={`/properties/${r.id}`} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
+                  <a href={propertyPath(r)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                     <Eye className="h-3.5 w-3.5" /> View
                   </a>
                   {r.status !== "approved" && (

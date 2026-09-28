@@ -9,8 +9,8 @@ import { fetchFavoriteProperties } from "@/lib/queries";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Saved Properties | MeraGhar",
-  description: "Properties you have saved on MeraGhar in Kaithal and Pundri.",
+  title: "Saved Properties",
+  description: "Properties you have saved on MeraGhar in Kaithal, Kurukshetra, Pundri and Narwana.",
 };
 
 export default async function FavoritesPage() {

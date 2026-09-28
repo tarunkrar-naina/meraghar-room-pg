@@ -82,6 +82,8 @@ export interface PropertyFilters {
 
 export interface PropertyCardData {
   id: string;
+  /** SEO slug used to build the keyword-rich detail URL. */
+  slug: string | null;
   title: string;
   purpose: PropertyPurpose;
   property_type: PropertyType;
@@ -122,3 +124,15 @@ export interface PropertyFormValues {
 }
 
 export type RequirementStatus = "open" | "closed";
+
+export type {
+  BreadcrumbItem,
+  Category,
+  City,
+  MetadataProps,
+  OpenGraphTags,
+  OwnerInfo,
+  PropertyListing,
+  SchemaType,
+  SeoPage,
+} from "./seo";

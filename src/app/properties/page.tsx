@@ -3,10 +3,13 @@ import { Home } from "lucide-react";
 import { Container, EmptyState } from "@/components/ui";
 import { PropertyFilters } from "@/components/PropertyFilters";
 import { PropertyCard } from "@/components/PropertyCard";
+import { PropertyGrid } from "@/components/PropertyGrid";
 import { Pagination } from "@/components/Pagination";
+import { JsonLd } from "@/components/JsonLd";
+import { generateMetadata as buildSeoMetadata, generateSchemaMarkup } from "@/lib/seo";
 import { fetchCities, fetchFavoriteIds, fetchLocalities, fetchPublicProperties } from "@/lib/queries";
 import { getAuthUser } from "@/lib/auth";
-import { cn, strParam } from "@/lib/utils";
+import { strParam } from "@/lib/utils";
 import type { AppPageProps, PropertyFilters as Filters } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -21,12 +24,16 @@ export async function generateMetadata(props: AppPageProps): Promise<Metadata> {
   if (city) parts.push(`${city} properties`);
   if (purpose === "rent") parts.push("for rent");
   if (purpose === "sale") parts.push("for sale");
-  const title = parts.length
-    ? `${parts.join(" ")} in Kaithal & Pundri`
-    : "Properties for Rent & Sale in Kaithal & Pundri";
+  const title = parts.length ? `${parts.join(" ")} in Haryana` : "Properties for Rent & Sale in Haryana";
+  const hasFilters = Object.keys(searchParams).some((key) => !["view"].includes(key));
   return {
-    title,
-    description: `Search ${title}. Rooms, PGs, flats, houses, shops and plots. Prices in INR.`,
+    ...buildSeoMetadata("static", {
+      title,
+      description: `Search ${title}. Browse rooms, PGs, flats, houses, shops and plots with local owner contact on MeraGhar.`,
+      path: "/properties/",
+      keywords: ["property Haryana", city || "property in Haryana", purpose === "rent" ? "property for rent" : "property for sale"],
+    }),
+    robots: hasFilters ? { index: false, follow: true } : { index: true, follow: true },
   };
 }
 
@@ -76,7 +83,7 @@ export default async function PropertiesPage(props: AppPageProps) {
         </h1>
         <p className="mt-1 text-sm text-slate-500">
           {result.count > 0
-            ? `${result.count} listing${result.count === 1 ? "" : "s"} found in Kaithal & Pundri`
+            ? `${result.count} listing${result.count === 1 ? "" : "s"} found in ${strParam(searchParams.city) || "Kaithal, Kurukshetra, Pundri & Narwana"}`
             : "No listings match your search"}
         </p>
       </div>
@@ -94,26 +101,24 @@ export default async function PropertiesPage(props: AppPageProps) {
             description="Try changing the city, locality or price filters. New listings are added by owners every day."
           />
         ) : (
-          <div
-            className={cn(
-              "grid gap-5",
-              listView ? "grid-cols-1" : "grid-cols-1 sm:grid-cols-2 lg:grid-cols-3"
-            )}
-          >
-            {result.properties.map((p) => (
-              <PropertyCard
-                key={p.id}
-                property={p}
-                saved={favoriteIds.includes(p.id)}
-                isLoggedIn={Boolean(user)}
-                layout={listView ? "list" : "grid"}
-              />
-            ))}
-          </div>
+          listView ? (
+            <div className="grid grid-cols-1 gap-5">
+              {result.properties.map((p) => (
+                <PropertyCard key={p.id} property={p} saved={favoriteIds.includes(p.id)} isLoggedIn={Boolean(user)} layout="list" />
+              ))}
+            </div>
+          ) : (
+            <PropertyGrid properties={result.properties} savedIds={favoriteIds} isLoggedIn={Boolean(user)} />
+          )
         )}
 
         <Pagination page={page} totalPages={totalPages} />
       </div>
+      <JsonLd
+        data={generateSchemaMarkup("ItemList", {
+          items: result.properties.map((property) => ({ name: property.title, url: `/properties/${property.id}` })),
+        })}
+      />
     </Container>
   );
 }

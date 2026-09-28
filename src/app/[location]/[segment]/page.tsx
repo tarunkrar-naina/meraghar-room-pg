@@ -4,13 +4,14 @@ import { notFound } from "next/navigation";
 import { Home } from "lucide-react";
 import { Container, EmptyState } from "@/components/ui";
 import { PropertyFilters } from "@/components/PropertyFilters";
-import { PropertyCard } from "@/components/PropertyCard";
+import { PropertyGrid } from "@/components/PropertyGrid";
 import { Pagination } from "@/components/Pagination";
+import { Breadcrumb } from "@/components/Navigation/Breadcrumb";
 import { JsonLd } from "@/components/JsonLd";
-import { LocationBreadcrumbs } from "@/components/locations/LocationBreadcrumbs";
 import { LocationFaq } from "@/components/locations/LocationFaq";
 import { LocationLandingContent } from "@/components/locations/LocationLandingContent";
 import {
+  areaPath,
   categoryPath,
   getChildLocations,
   getLocationBySlug,
@@ -30,10 +31,11 @@ import {
   categoryPageDescription,
   categoryPageTitle,
   locationPageTitle,
-  siteUrl,
 } from "@/lib/locations/seo";
-import { breadcrumbJsonLd } from "@/lib/locations/structured-data";
-import { fetchCities, fetchCityStats, fetchFavoriteIds, fetchLocalities, fetchPublicProperties } from "@/lib/queries";
+import { categoryPageJsonLd } from "@/lib/locations/structured-data";
+import { buildCanonicalUrl } from "@/lib/seo";
+import { propertyPath } from "@/lib/urls";
+import { fetchCities, fetchCategoryStats, fetchCityStats, fetchFavoriteIds, fetchLocalities, fetchPublicProperties } from "@/lib/queries";
 import { getAuthUser } from "@/lib/auth";
 import { strParam } from "@/lib/utils";
 import type { AppPageProps, LocationRow } from "@/types";
@@ -49,7 +51,7 @@ export async function generateMetadata(props: AppPageProps): Promise<Metadata> {
 
   const category = getCategoryBySlug(segment.toLowerCase());
   if (category) {
-    const stats = await fetchCityStats(location.name);
+    const stats = await fetchCategoryStats(location.name, category.purpose ?? "rent", category.type ?? "");
     return buildCategoryMetadata(category, location, stats);
   }
 
@@ -115,7 +117,7 @@ async function CategoryView({
 }) {
   const category = getCategoryBySlug(categorySlug) as NonNullable<ReturnType<typeof getCategoryBySlug>>;
   const [stats, cities, localities, user] = await Promise.all([
-    fetchCityStats(location.name),
+    fetchCategoryStats(location.name, category.purpose ?? "rent", category.type ?? ""),
     fetchCities(),
     fetchLocalities(),
     getAuthUser(),
@@ -141,10 +143,10 @@ async function CategoryView({
 
   return (
     <Container className="py-6 sm:py-8">
-      <LocationBreadcrumbs
+      <Breadcrumb
         items={[
-          { label: location.name, href: locationPath(location.slug) },
-          { label: category.label },
+          { name: location.name, href: locationPath(location.slug) },
+          { name: category.label, href: categoryPath(location.slug, category.slug) },
         ]}
       />
 
@@ -170,11 +172,7 @@ async function CategoryView({
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {result.properties.map((p) => (
-              <PropertyCard key={p.id} property={p} saved={favoriteIds.includes(p.id)} isLoggedIn={Boolean(user)} />
-            ))}
-          </div>
+          <PropertyGrid properties={result.properties} savedIds={favoriteIds} isLoggedIn={Boolean(user)} />
         )}
 
         <Pagination page={pageNum} totalPages={totalPages} />
@@ -202,11 +200,19 @@ async function CategoryView({
       </div>
 
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Home", url: siteUrl() },
-          { name: `${location.name} properties`, url: `${siteUrl()}${locationPath(location.slug)}` },
-          { name: category.label, url: `${siteUrl()}${categoryPath(location.slug, category.slug)}` },
-        ])}
+        data={categoryPageJsonLd({
+          siteUrl: buildCanonicalUrl("/"),
+          url: categoryPath(location.slug, category.slug),
+          name: categoryPageTitle(category, location),
+          description: categoryPageDescription(category, location, stats),
+          category,
+          location,
+          stats,
+          listings: result.properties.map((p) => ({
+            url: buildCanonicalUrl(propertyPath(p)),
+            title: p.title,
+          })),
+        })}
       />
     </Container>
   );
@@ -233,10 +239,10 @@ async function ChildView({ location, child }: { location: LocationRow; child: Lo
 
   return (
     <Container className="py-6 sm:py-8">
-      <LocationBreadcrumbs
+      <Breadcrumb
         items={[
-          { label: location.name, href: locationPath(location.slug) },
-          { label: child.name },
+          { name: location.name, href: locationPath(location.slug) },
+          { name: child.name, href: locationPath(child.slug) },
         ]}
       />
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
@@ -260,15 +266,6 @@ async function ChildView({ location, child }: { location: LocationRow; child: Lo
         />
       </div>
 
-      <div className="mt-10">
-        <JsonLd
-          data={breadcrumbJsonLd([
-            { name: "Home", url: siteUrl() },
-            { name: `${location.name} properties`, url: `${siteUrl()}${locationPath(location.slug)}` },
-            { name: `${child.name} properties`, url: `${siteUrl()}${locationPath(child.slug)}` },
-          ])}
-        />
-      </div>
     </Container>
   );
 }
@@ -297,10 +294,10 @@ async function AreaView({
 
   return (
     <Container className="py-6 sm:py-8">
-      <LocationBreadcrumbs
+      <Breadcrumb
         items={[
-          { label: location.name, href: locationPath(location.slug) },
-          { label: area },
+          { name: location.name, href: locationPath(location.slug) },
+          { name: area, href: areaPath(location.slug, slugifySegment(area)) },
         ]}
       />
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">{areaPageTitle(area, location)}</h1>
@@ -319,11 +316,7 @@ async function AreaView({
             }
           />
         ) : (
-          <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-3">
-            {result.properties.map((p) => (
-              <PropertyCard key={p.id} property={p} saved={favoriteIds.includes(p.id)} isLoggedIn={Boolean(user)} />
-            ))}
-          </div>
+          <PropertyGrid properties={result.properties} savedIds={favoriteIds} isLoggedIn={Boolean(user)} />
         )}
 
         <Pagination page={page} totalPages={totalPages} />
@@ -333,15 +326,6 @@ async function AreaView({
         <LocationFaq location={location} areas={[area, ...(location.areas ?? [])]} />
       </div>
 
-      <div className="mt-10">
-        <JsonLd
-          data={breadcrumbJsonLd([
-            { name: "Home", url: siteUrl() },
-            { name: `${location.name} properties`, url: `${siteUrl()}${locationPath(location.slug)}` },
-            { name: area, url: `${siteUrl()}${locationPath(location.slug)}/${slugifySegment(area)}` },
-          ])}
-        />
-      </div>
     </Container>
   );
 }

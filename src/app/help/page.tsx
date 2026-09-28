@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { Container } from "@/components/ui";
 import { OpenChatButton } from "@/components/ai/OpenChatButton";
+import { buildCanonicalUrl } from "@/lib/seo";
 import {
   Mail,
   MessageCircle,
@@ -14,6 +15,7 @@ export const metadata: Metadata = {
   title: "Help & Support",
   description:
     "MeraGhar help aur support - property dhundhne, sahi owner se baat karne, ya apni property post karne mein madad. WhatsApp, call ya email se turant sahayata.",
+  alternates: { canonical: buildCanonicalUrl("/help/") },
 };
 
 const FAQS = [
@@ -31,7 +33,7 @@ const FAQS = [
   },
   {
     q: "Kaun se cities/areas kaam karte hain?",
-    a: "Abhi site Kaithal aur Pundri (Kaithal district), Haryana par focused hai. Cities list mein dono dikhte hain, aur Area Map par properties ko pin ke roop mein dekha ja sakta hai.",
+    a: "Abhi site Kaithal, Kurukshetra, Pundri aur Narwana, Haryana par focused hai. Cities list mein chaaron dikhte hain, aur Area Map par properties ko pin ke roop mein dekha ja sakta hai.",
   },
   {
     q: "AI Agent kya hai?",

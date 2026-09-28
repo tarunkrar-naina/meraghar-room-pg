@@ -23,6 +23,7 @@ import { ImageGallery } from "@/components/ImageGallery";
 import { ReportModal } from "@/components/ReportModal";
 import { SaveButton } from "@/components/SaveButton";
 import { AdminContactCard } from "@/components/AdminContactCard";
+import { buildPropertyImageAlt } from "@/lib/seo";
 import type { PropertyWithImages, PublicOwnerRow } from "@/types";
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
@@ -50,22 +51,19 @@ export function PropertyDetails({
     ? property.images.map((i) => i.image_url)
     : [];
   const amenityList = property.amenities ?? [];
+  const galleryAlt = buildPropertyImageAlt({
+    property_type: property.property_type,
+    bhk: property.bhk,
+    city: property.city,
+    locality: property.locality,
+  });
 
   return (
     <>
-      {/* breadcrumb */}
-      <nav className="mb-4 flex items-center gap-1.5 text-sm text-slate-500">
-        <Link href="/" className="hover:text-teal-600">Home</Link>
-        <span>/</span>
-        <Link href="/properties" className="hover:text-teal-600">Properties</Link>
-        <span>/</span>
-        <span className="truncate text-slate-800">{property.title}</span>
-      </nav>
-
       <div className="grid grid-cols-1 gap-8 lg:grid-cols-[1fr_360px]">
         {/* ---------- Left column ---------- */}
         <div className="min-w-0 space-y-6">
-          <ImageGallery images={images} title={property.title} />
+          <ImageGallery images={images} title={property.title} altText={galleryAlt} />
 
           {/* overview chips */}
           <div className="grid grid-cols-2 gap-3 rounded-2xl border border-slate-200 bg-white p-4 sm:grid-cols-4">

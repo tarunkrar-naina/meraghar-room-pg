@@ -89,9 +89,9 @@ export async function createProperty(input: PropertyFormValues, imageUrls: strin
     if (imgError) return { ok: false, error: imgError.message, propertyId: data.id };
   }
 
-  revalidatePath("/");
-  revalidatePath("/properties");
-  revalidatePath("/dashboard");
+  revalidatePath("/", "layout");
+  revalidatePath("/properties/");
+  revalidatePath("/dashboard/");
   return { ok: true, propertyId: data.id };
 }
 
@@ -164,11 +164,12 @@ export async function updateProperty(
     if (imgError) return { ok: false, error: imgError.message, propertyId: id };
   }
 
-  revalidatePath("/");
-  revalidatePath("/properties");
-  revalidatePath(`/properties/${slug}`);
-  revalidatePath(`/properties/${id}`);
-  revalidatePath("/dashboard");
+  // The listing's URL is /{city}/{category}/{slug}/ and its city/type may just
+  // have changed, so refresh the whole public tree: index, browse page, the
+  // detail route, the city hub and the category hub.
+  revalidatePath("/", "layout");
+  revalidatePath("/properties/");
+  revalidatePath("/dashboard/");
   return { ok: true, propertyId: id };
 }
 
@@ -182,9 +183,9 @@ export async function deleteProperty(id: string): Promise<ActionResult> {
   const { error } = await supabase.from("properties").delete().eq("id", id);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/");
-  revalidatePath("/properties");
-  revalidatePath("/dashboard");
+  revalidatePath("/", "layout");
+  revalidatePath("/properties/");
+  revalidatePath("/dashboard/");
   return { ok: true };
 }
 
@@ -220,10 +221,10 @@ export async function setPropertyStatus(id: string, status: string): Promise<Act
     .eq("id", id);
   if (error) return { ok: false, error: error.message };
 
-  revalidatePath("/");
-  revalidatePath("/properties");
-  revalidatePath("/dashboard");
-  revalidatePath("/admin");
+  revalidatePath("/", "layout");
+  revalidatePath("/properties/");
+  revalidatePath("/dashboard/");
+  revalidatePath("/admin/");
   return { ok: true };
 }
 

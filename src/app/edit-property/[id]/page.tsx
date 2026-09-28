@@ -7,7 +7,7 @@ import { requireAdmin } from "@/lib/auth";
 import type { AppPageProps } from "@/types";
 
 export const metadata: Metadata = {
-  title: "Edit Property | MeraGhar",
+  title: "Edit Property",
   description: "Edit your property listing on MeraGhar.",
 };
 

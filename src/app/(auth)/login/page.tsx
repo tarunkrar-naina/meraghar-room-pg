@@ -5,7 +5,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { LoginForm } from "@/components/auth/LoginForm";
 
 export const metadata: Metadata = {
-  title: "Login | MeraGhar",
+  title: "Login",
   description: "Login to your MeraGhar account to manage properties and save favorites.",
 };
 

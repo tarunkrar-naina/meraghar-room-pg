@@ -4,8 +4,8 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { SignupForm } from "@/components/auth/SignupForm";
 
 export const metadata: Metadata = {
-  title: "Sign Up | MeraGhar",
-  description: "Create a free MeraGhar account to list or save properties in Kaithal and Pundri.",
+  title: "Sign Up",
+  description: "Create a free MeraGhar account to list or save properties in Kaithal, Kurukshetra, Pundri and Narwana.",
 };
 
 export default function SignupPage() {

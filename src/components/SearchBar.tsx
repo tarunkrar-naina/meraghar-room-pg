@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Search } from "lucide-react";
 import { PROPERTY_TYPE_LABELS, PROPERTY_TYPES } from "@/lib/constants";
+import { trackEvent } from "@/lib/analytics";
 import { cn } from "@/lib/utils";
 
 export function SearchBar({
@@ -33,6 +34,7 @@ export function SearchBar({
     if (minPrice) params.set("minPrice", minPrice);
     if (maxPrice) params.set("maxPrice", maxPrice);
     router.push(`/properties${params.toString() ? `?${params.toString()}` : ""}`);
+    trackEvent("search", { city, purpose, type });
   }
 
   const selectClass = "h-11 w-full rounded-lg border border-white/30 bg-white/95 px-3 text-sm text-slate-800 shadow-sm focus:outline-none focus:ring-2 focus:ring-teal-500";

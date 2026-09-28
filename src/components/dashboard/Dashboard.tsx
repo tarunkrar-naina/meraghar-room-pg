@@ -25,6 +25,7 @@ import { deleteProperty, setPropertyStatus } from "@/lib/actions/property";
 import { updateProfile } from "@/lib/actions/profile";
 import { signOut } from "@/lib/actions/auth";
 import { cn } from "@/lib/utils";
+import { propertyPath } from "@/lib/urls";
 
 type DashboardProps = {
   user: { id: string; name: string; phone: string; email?: string; avatar_url?: string | null };
@@ -65,13 +66,13 @@ export function Dashboard({ user, properties, favorites, requirements }: Dashboa
       </div>
 
       {/* tabs */}
-      <div className="flex gap-1 overflow-x-auto border-b border-slate-200 pb-px text-sm font-medium text-slate-500">
+      <div className="flex flex-wrap gap-1 border-b border-slate-200 pb-px text-sm font-medium text-slate-500">
         {tabs.map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
             className={cn(
-              "whitespace-nowrap border-b-2 px-4 py-2.5 transition-colors",
+              "whitespace-nowrap border-b-2 px-3 py-2.5 transition-colors sm:px-4",
               tab === t ? "border-teal-600 text-teal-700" : "border-transparent hover:text-slate-700"
             )}
           >
@@ -166,7 +167,7 @@ function MyPropertiesPanel({ properties }: { properties: DashboardProps["propert
               </button>
             </div>
           </div>
-          <Link href={`/properties/${p.id}`} className="hidden text-slate-400 hover:text-teal-600 sm:block"><ArrowUpRight className="h-5 w-5" /></Link>
+          <Link href={propertyPath(p)} className="hidden text-slate-400 hover:text-teal-600 sm:block"><ArrowUpRight className="h-5 w-5" /></Link>
         </div>
       ))}
     </div>

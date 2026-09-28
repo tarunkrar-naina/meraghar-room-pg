@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CheckCircle2, Mail, MessageCircle, Phone, Send, ShieldCheck } from "lucide-react";
 import { submitContactRequest } from "@/lib/actions/contact";
+import { trackEvent } from "@/lib/analytics";
 import {
   ADMIN_CONTACT_EMAIL,
   ADMIN_CONTACT_PHONE,
@@ -56,6 +57,11 @@ export function AdminContactCard({
       });
       if (res.ok) {
         setSent(true);
+        trackEvent("generate_lead", {
+          source: isShop ? "shop" : propertyId ? "property" : "requirement",
+          property_id: propertyId ?? "",
+          requirement_id: requirementId ?? "",
+        });
       } else {
         setError(res.error ?? "Kuch galat hua, dobara try karein.");
       }
@@ -99,10 +105,10 @@ export function AdminContactCard({
         </div>
       ) : (
         <>
-          <div className="mt-3 grid grid-cols-2 gap-2">
+          <div className="mt-3 flex flex-wrap gap-2">
             <a
               href={`tel:${ADMIN_CONTACT_PHONE_INTL}`}
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-teal-600 text-sm font-semibold text-white hover:bg-teal-700"
+              className="inline-flex h-10 min-w-32 flex-1 items-center justify-center gap-1.5 rounded-lg bg-teal-600 text-sm font-semibold text-white hover:bg-teal-700"
             >
               <Phone className="h-4 w-4" /> Call Admin
             </a>
@@ -110,7 +116,7 @@ export function AdminContactCard({
               href={`https://wa.me/${ADMIN_WHATSAPP_NUMBER}?text=${encodeURIComponent(waText)}`}
               target="_blank"
               rel="noopener noreferrer"
-              className="inline-flex h-10 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
+              className="inline-flex h-10 min-w-32 flex-1 items-center justify-center gap-1.5 rounded-lg bg-emerald-600 text-sm font-semibold text-white hover:bg-emerald-700"
             >
               <MessageCircle className="h-4 w-4" /> WhatsApp Admin
             </a>
@@ -125,19 +131,19 @@ export function AdminContactCard({
           <form onSubmit={submit} className="mt-3 rounded-xl border border-teal-200 bg-white p-3">
             <p className="text-xs font-bold text-slate-700">Ya apna interest yahan bhejein</p>
             {error && <p className="mt-1 text-xs text-red-600">{error}</p>}
-            <div className="mt-2 grid grid-cols-2 gap-2">
+            <div className="mt-2 flex flex-wrap gap-2">
               <input
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Naam"
-                className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus:border-teal-500 focus:outline-none"
+                className="h-9 min-w-32 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus:border-teal-500 focus:outline-none"
               />
               <input
                 value={phone}
                 onChange={(e) => setPhone(e.target.value.replace(/[^0-9]/g, "").slice(0, 10))}
                 placeholder="Mobile number"
                 inputMode="numeric"
-                className="h-9 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus:border-teal-500 focus:outline-none"
+                className="h-9 min-w-32 flex-1 rounded-lg border border-slate-200 bg-slate-50 px-3 text-sm focus:border-teal-500 focus:outline-none"
               />
             </div>
             <textarea

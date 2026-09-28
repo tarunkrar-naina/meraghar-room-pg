@@ -6,8 +6,8 @@ import { getAuthUser } from "@/lib/auth";
 import { fetchCities, fetchLocalities } from "@/lib/queries";
 
 export const metadata: Metadata = {
-  title: "Post Requirement | MeraGhar",
-  description: "Tell owners exactly what you are looking for in Kaithal and Pundri.",
+  title: "Post Requirement",
+  description: "Tell owners exactly what you are looking for in Kaithal, Kurukshetra, Pundri and Narwana.",
 };
 
 export default async function PostRequirementPage({

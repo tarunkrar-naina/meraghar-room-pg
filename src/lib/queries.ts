@@ -2,7 +2,7 @@
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { EMPTY_STATS, type LocationStats } from "@/lib/locations/seo";
-import type { PropertyWithImages, PropertyListItem, RequirementRow } from "@/types";
+import type { PropertyWithImages, PropertyListItem, PropertyPurpose, PropertyType, RequirementRow } from "@/types";
 
 export type DashboardRequirement = RequirementRow & { user_name?: string; user_phone?: string };
 
@@ -31,7 +31,7 @@ export interface PublicPropertiesResult {
 }
 
 const LIST_SELECT = `
-  id, title, purpose, property_type, price, rent_period, city, locality,
+  id, slug, title, purpose, property_type, price, rent_period, city, locality,
   bhk, furnishing, status, is_verified, is_featured, created_at,
   available_from, amenities, latitude, longitude, images:property_images(image_url, display_order)
 `;
@@ -109,6 +109,31 @@ export async function fetchPublicProperties(
   };
 }
 
+export interface PublicSitemapProperty {
+  id: string;
+  slug: string | null;
+  created_at: string;
+  updated_at: string;
+  is_featured: boolean;
+  city: string;
+  purpose: PropertyPurpose;
+  property_type: PropertyType;
+}
+
+export async function fetchPublicPropertySitemap(): Promise<PublicSitemapProperty[]> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return [];
+
+  const { data, error } = await supabase
+    .from("properties")
+    .select("id, slug, created_at, updated_at, is_featured, city, purpose, property_type")
+    .eq("status", "approved")
+    .order("updated_at", { ascending: false })
+    .range(0, 4999);
+  if (error || !data) return [];
+  return data as PublicSitemapProperty[];
+}
+
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
 }
@@ -183,32 +208,96 @@ export const fetchCityStats = cache(async (city: string): Promise<LocationStats>
   return { total, rent, sale, byType, minRent, maxRent, minSale, maxSale, lastUpdated };
 });
 
-/** Fetch one approved property by id or slug with its images. */
-export async function fetchPublicProperty(key: string): Promise<PropertyWithImages | null> {
+export const fetchCategoryStats = cache(async (city: string, purpose: PropertyPurpose, type: string): Promise<LocationStats> => {
   const supabase = await createSupabaseServerClient();
-  if (!supabase) return null;
-
-  const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+  if (!supabase) return EMPTY_STATS;
 
   let builder: any = supabase
     .from("properties")
-    .select("*, images:property_images(image_url, display_order)")
+    .select("id, purpose, property_type, price, created_at")
     .eq("status", "approved")
-    .limit(1);
-
-  builder = isId ? builder.eq("id", key) : builder.eq("slug", key);
+    .in("city", cityNameVariants(city))
+    .eq("purpose", purpose);
+  if (type) builder = builder.eq("property_type", type);
 
   const { data, error } = await builder;
-  if (error || !data || data.length === 0) return null;
+  if (error || !data) return EMPTY_STATS;
 
-  const row = data[0];
-  return {
-    ...row,
-    images: (row.images ?? [])
-      .slice()
-      .sort((a: any, b: any) => a.display_order - b.display_order),
-  } as PropertyWithImages;
-}
+  let total = 0;
+  let rent = 0;
+  let sale = 0;
+  let minRent: number | null = null;
+  let maxRent: number | null = null;
+  let minSale: number | null = null;
+  let maxSale: number | null = null;
+  let lastUpdated: string | null = null;
+  const byType: Record<string, number> = {};
+
+  for (const row of data) {
+    total += 1;
+    const rowPurpose = row.purpose as PropertyListItem["purpose"];
+    if (rowPurpose === "rent") rent += 1;
+    else sale += 1;
+    const key = String(row.property_type ?? "other");
+    byType[key] = (byType[key] ?? 0) + 1;
+    const price = Number(row.price);
+    if (Number.isFinite(price)) {
+      if (rowPurpose === "rent") {
+        if (minRent === null || price < minRent) minRent = price;
+        if (maxRent === null || price > maxRent) maxRent = price;
+      } else {
+        if (minSale === null || price < minSale) minSale = price;
+        if (maxSale === null || price > maxSale) maxSale = price;
+      }
+    }
+    if (!lastUpdated || row.created_at > lastUpdated) lastUpdated = row.created_at;
+  }
+
+  return { total, rent, sale, byType, minRent, maxRent, minSale, maxSale, lastUpdated };
+});
+
+/**
+ * Fetch one approved property by id or slug with its images.
+ *
+ * Wrapped in React `cache()` because both generateMetadata and the page body
+ * need it — without this every request fetches the same row twice.
+ */
+export const fetchPublicProperty = cache(
+  async (key: string): Promise<PropertyWithImages | null> => {
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) return null;
+
+    const isId = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(key);
+
+    let builder: any = supabase
+      .from("properties")
+      .select("*, images:property_images(image_url, display_order)")
+      .eq("status", "approved")
+      .limit(1);
+
+    builder = isId ? builder.eq("id", key) : builder.eq("slug", key);
+
+    const { data, error } = await builder;
+    if (error || !data || data.length === 0) return null;
+
+    const row = data[0];
+    return {
+      ...row,
+      images: (row.images ?? [])
+        .slice()
+        .sort((a: any, b: any) => a.display_order - b.display_order),
+    } as PropertyWithImages;
+  }
+);
+
+/**
+ * Canonical site path for a property row: /{city}/{category}/{slug}/
+ *
+ * Re-exported from @/lib/locations so there is exactly one implementation and
+ * so callers can import it from either module.
+ */
+export { resolvePropertyPath as propertyCanonicalPath } from "@/lib/locations";
+
 
 /** Owner/admin view of a single property (any status). */
 export async function fetchPropertyForOwner(id: string, userId: string): Promise<PropertyWithImages | null> {

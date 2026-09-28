@@ -5,8 +5,8 @@ import { fetchCities, fetchLocalities } from "@/lib/queries";
 import { requireAdmin } from "@/lib/auth";
 
 export const metadata: Metadata = {
-  title: "Post a Property | MeraGhar",
-  description: "Add a property listing on MeraGhar in Kaithal and Pundri.",
+  title: "Post a Property",
+  description: "Add a property listing on MeraGhar in Kaithal, Kurukshetra, Pundri and Narwana.",
 };
 
 export default async function AddPropertyPage() {

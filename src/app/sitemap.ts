@@ -1,9 +1,10 @@
 import type { MetadataRoute } from "next";
-import { getPublicEnv } from "@/lib/env";
-import { fetchPublicProperties, cityNameVariants } from "@/lib/queries";
-import { fetchActiveLocations } from "@/lib/locations";
+import { fetchActiveLocations, resolvePropertyPath } from "@/lib/locations";
+import { cityNameVariants, fetchPublicPropertySitemap } from "@/lib/queries";
 import { LOCATION_CATEGORIES } from "@/lib/locations/catalog";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
+import { buildCanonicalUrl } from "@/lib/seo";
+import { SEO_CITIES } from "@/lib/seo-config";
 
 export const dynamic = "force-dynamic";
 
@@ -16,31 +17,45 @@ function slugifySegment(value: string): string {
 }
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const base = getPublicEnv().siteUrl.replace(/\/$/, "");
+  const now = new Date();
+  const urls: MetadataRoute.Sitemap = [];
+  const seen = new Set<string>();
 
-  const urls: MetadataRoute.Sitemap = [
-    { url: base, lastModified: new Date(), priority: 1 },
-    { url: `${base}/properties`, lastModified: new Date(), priority: 0.9 },
-    { url: `${base}/requirements`, lastModified: new Date(), priority: 0.6 },
-    { url: `${base}/login`, lastModified: new Date(), priority: 0.3 },
-    { url: `${base}/signup`, lastModified: new Date(), priority: 0.3 },
-    { url: `${base}/post-requirement`, lastModified: new Date(), priority: 0.5 },
-  ];
+  function addUrl(path: string, priority: number, changeFrequency: "daily" | "weekly" | "monthly", lastModified = now) {
+    const url = buildCanonicalUrl(path);
+    if (seen.has(url)) return;
+    seen.add(url);
+    urls.push({ url, lastModified, changeFrequency, priority });
+  }
 
-  const result = await fetchPublicProperties({ pageSize: 3000, sort: "newest" });
-  for (const property of result.properties) {
-    urls.push({
-      url: `${base}/properties/${property.id}`,
-      lastModified: new Date(property.created_at),
-      changeFrequency: "weekly" as const,
-      priority: property.is_featured ? 0.8 : 0.7,
-    });
+  addUrl("/", 1, "daily");
+  addUrl("/properties/", 0.9, "daily");
+  addUrl("/about/", 0.5, "monthly");
+  addUrl("/contact/", 0.6, "monthly");
+  addUrl("/how-it-works/", 0.5, "monthly");
+  addUrl("/help/", 0.5, "monthly");
+  addUrl("/requirements/", 0.6, "daily");
+
+  // Only the canonical keyword path is indexable: /{city}/{category}/{slug}/.
+  // /properties/{id}/ is a 308 redirect stub, so advertising it here would point
+  // Google at a redirect instead of the real listing page.
+  // resolvePropertyPath (not urls.propertyPath) because the city segment has to
+  // be resolved through the locations table, exactly like the detail page does.
+  const properties = await fetchPublicPropertySitemap();
+  for (const property of properties) {
+    const lastModified = new Date(property.updated_at || property.created_at);
+    addUrl(
+      await resolvePropertyPath(property),
+      property.is_featured ? 0.8 : 0.7,
+      "weekly",
+      Number.isNaN(lastModified.getTime()) ? now : lastModified,
+    );
   }
 
   const locations = await fetchActiveLocations();
+  const locationBySlug = new Map(locations.map((location) => [location.slug.toLowerCase(), location]));
+  const targetSlugs = new Set([...SEO_CITIES.map((city) => city.slug), ...locations.map((location) => location.slug.toLowerCase())]);
 
-  // Area URLs are only added to the sitemap when that locality has real
-  // approved listings, so we never advertise empty pages.
   const areaWithListings = new Set<string>();
   const supabase = await createSupabaseServerClient();
   if (supabase) {
@@ -51,56 +66,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
         .eq("status", "approved")
         .in("city", cityNameVariants(location.name))
         .limit(100);
-      const locals = Array.from(
-        new Set((data ?? []).map((r) => r.locality).filter((v): v is string => Boolean(v)))
-      );
-      for (const area of locals) {
-        const areaSlug = slugifySegment(area);
-        if (areaSlug) areaWithListings.add(`${location.slug.toLowerCase()}/${areaSlug}`);
-      }
+      const areaSlugs = Array.from(new Set((data ?? []).map((row) => slugifySegment(String(row.locality ?? ""))).filter(Boolean)));
+      for (const areaSlug of areaSlugs) areaWithListings.add(`${location.slug.toLowerCase()}/${areaSlug}`);
     }
   }
 
-  for (const location of locations) {
-    const slug = location.slug.toLowerCase();
-    const lastModified = new Date(location.created_at);
-
-    urls.push({
-      url: `${base}/${slug}`,
-      lastModified,
-      changeFrequency: "weekly" as const,
-      priority: 0.8,
-    });
+  for (const slug of targetSlugs) {
+    const location = locationBySlug.get(slug);
+    const lastModified = location?.created_at ? new Date(location.created_at) : now;
+    addUrl(`/${slug}/`, 0.8, "weekly", Number.isNaN(lastModified.getTime()) ? now : lastModified);
 
     for (const category of LOCATION_CATEGORIES) {
-      urls.push({
-        url: `${base}/${slug}/${category.slug}`,
-        lastModified,
-        changeFrequency: "weekly" as const,
-        priority: 0.6,
-      });
+      addUrl(`/${slug}/${category.slug}/`, 0.6, "weekly", lastModified);
     }
 
-    if (location.parent_slug) {
-      urls.push({
-        url: `${base}/${location.parent_slug.toLowerCase()}/${slug}`,
-        lastModified,
-        changeFrequency: "weekly" as const,
-        priority: 0.7,
-      });
-    }
-
-    for (const area of location.areas ?? []) {
+    for (const area of location?.areas ?? []) {
       const areaSlug = slugifySegment(area);
-      const key = areaSlug ? `${slug}/${areaSlug}` : null;
-      if (key && areaWithListings.has(key)) {
-        urls.push({
-          url: `${base}/${key}`,
-          lastModified,
-          changeFrequency: "weekly" as const,
-          priority: 0.5,
-        });
-      }
+      if (areaSlug && areaWithListings.has(`${slug}/${areaSlug}`)) addUrl(`/${slug}/${areaSlug}/`, 0.5, "weekly", lastModified);
     }
   }
 

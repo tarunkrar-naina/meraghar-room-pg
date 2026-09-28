@@ -1,4 +1,5 @@
 import Link from "next/link";
+import type { Metadata } from "next";
 import {
   ArrowRight,
   BadgeCheck,
@@ -8,20 +9,27 @@ import {
   MapPin,
   Megaphone,
   ShieldAlert,
-  Sofa,
   Store,
-  Tag,
 } from "lucide-react";
 import { Container, SectionHeading, EmptyState } from "@/components/ui";
 import { SearchBar } from "@/components/SearchBar";
 import { PropertyCard } from "@/components/PropertyCard";
+import { PropertyGrid } from "@/components/PropertyGrid";
+import { CitySelector } from "@/components/CitySelector";
+import { CategoryNav } from "@/components/CategoryNav";
 import { RequirementsBoard } from "@/components/requirements/RequirementsBoard";
 import { fetchCities, fetchLocalities, fetchPublicProperties, fetchRequirements } from "@/lib/queries";
-import { fetchActiveLocations } from "@/lib/locations";
 import { getAuthUser } from "@/lib/auth";
-import { APP_SUBTITLE, APP_TAGLINE, DEFAULT_CITIES } from "@/lib/constants";
+import { APP_SUBTITLE, APP_TAGLINE, APP_TAGLINE_HINDI, DEFAULT_CITIES } from "@/lib/constants";
+import { JsonLd } from "@/components/JsonLd";
+import { generateSchemaMarkup, generateMetadata as generateSeoMetadata } from "@/lib/seo";
+import { SEO_CITIES } from "@/lib/seo-config";
 
 export const dynamic = "force-dynamic";
+
+export async function generateMetadata(): Promise<Metadata> {
+  return generateSeoMetadata("home", { path: "/" });
+}
 
 export default async function HomePage() {
   const [cities, localities] = await Promise.all([fetchCities(), fetchLocalities()]);
@@ -29,8 +37,6 @@ export default async function HomePage() {
 
   const user = await getAuthUser();
   const isLoggedIn = Boolean(user);
-
-  const locations = await fetchActiveLocations();
 
   const [featured, latest, rentProperties, saleProperties, shopProperties, requirements] = await Promise.all([
     fetchPublicProperties({ featuredOnly: true, pageSize: 6 }),
@@ -58,11 +64,12 @@ export default async function HomePage() {
           <div className="mx-auto max-w-3xl text-center">
             <span className="inline-flex items-center gap-1.5 rounded-full bg-white/10 px-4 py-1.5 text-xs font-semibold uppercase tracking-wider text-teal-300 ring-1 ring-white/20">
               <MapPin className="h-3.5 w-3.5" />
-              Kaithal · Pundri · Haryana
+                Kaithal · Kurukshetra · Pundri · Narwana
             </span>
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
               {APP_TAGLINE}
             </h1>
+            <p className="mt-2 text-sm font-medium text-teal-200 sm:text-base">{APP_TAGLINE_HINDI}</p>
             <p className="mx-auto mt-4 max-w-xl text-base text-slate-300 sm:text-lg">
               {APP_SUBTITLE}
             </p>
@@ -90,57 +97,17 @@ export default async function HomePage() {
         </Container>
       </section>
 
-      {/* ---------- Quick category cards ---------- */}
       <section className="py-10">
         <Container>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            {[
-              { href: "/properties?purpose=rent", label: "Rooms & PGs", icon: Sofa },
-              { href: "/properties?purpose=rent", label: "Flats on Rent", icon: Building2 },
-              { href: "/properties?purpose=sale", label: "Buy a Home", icon: Home },
-              { href: "/properties?purpose=sale", label: "Shops & Plots", icon: Tag },
-            ].map(({ href, label, icon: Icon }) => (
-              <Link
-                key={label}
-                href={href}
-                className="group flex items-center gap-3 rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-md"
-              >
-                <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
-                  <Icon className="h-5 w-5" />
-                </span>
-                <span className="text-sm font-semibold text-slate-800 group-hover:text-teal-700">{label}</span>
-              </Link>
-            ))}
-          </div>
+          <CategoryNav citySlug="kaithal" heading="Find a property for rent or sale" />
         </Container>
       </section>
 
-      {/* ---------- Popular cities (SEO location pages) ---------- */}
-      {locations.length > 0 && (
-        <section className="py-4">
-          <Container>
-            <SectionHeading
-              title="Properties in nearby cities"
-              subtitle="Dedicated pages for every city — rooms, PGs, flats, houses and shops."
-            />
-            <div className="grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {locations.slice(0, 8).map((loc) => (
-                <Link
-                  key={loc.id}
-                  href={`/${loc.slug}`}
-                  className="group flex items-center justify-between rounded-2xl border border-slate-200 bg-white px-4 py-4 shadow-sm transition-all hover:-translate-y-0.5 hover:border-teal-300 hover:shadow-md"
-                >
-                  <div>
-                    <p className="font-semibold text-slate-800 group-hover:text-teal-700">{loc.name}</p>
-                    <p className="text-xs text-slate-400">Rooms · PG · Flats · Shops</p>
-                  </div>
-                  <ArrowRight className="h-4 w-4 text-slate-300 transition-transform group-hover:translate-x-0.5 group-hover:text-teal-600" />
-                </Link>
-              ))}
-            </div>
-          </Container>
-        </section>
-      )}
+      <section className="py-4">
+        <Container>
+          <CitySelector heading="Explore properties by city" />
+        </Container>
+      </section>
 
       {/* ---------- Featured ---------- */}
       {featured.properties.length > 0 && (
@@ -169,7 +136,7 @@ export default async function HomePage() {
         <Container>
           <SectionHeading
             title="Latest Properties"
-            subtitle="Freshly added in Kaithal & Pundri"
+               subtitle="Freshly added in Kaithal, Kurukshetra, Pundri & Narwana"
             action={
               <Link href="/properties" className="inline-flex items-center gap-1 text-sm font-semibold text-teal-600 hover:text-teal-700">
                 See all listings <ArrowRight className="h-4 w-4" />
@@ -183,11 +150,7 @@ export default async function HomePage() {
               description="Listings posted by owners will appear here once approved."
             />
           ) : (
-            <div className="grid grid-cols-1 gap-5 sm:grid-cols-2 lg:grid-cols-4">
-              {latest.properties.map((p) => (
-                <PropertyCard key={p.id} property={p} isLoggedIn={isLoggedIn} />
-              ))}
-            </div>
+            <PropertyGrid properties={latest.properties} isLoggedIn={isLoggedIn} />
           )}
         </Container>
       </section>
@@ -197,7 +160,7 @@ export default async function HomePage() {
         <Container>
           <SectionHeading
             title="Latest Property Requirements"
-            subtitle="Log kya dhoondh rahe hain in Kaithal & Pundri"
+             subtitle="Log kya dhoondh rahe hain in Kaithal, Kurukshetra, Pundri & Narwana"
             action={
               <Link href="/requirements" className="inline-flex items-center gap-1 text-sm font-semibold text-teal-600 hover:text-teal-700">
                 View all requirements <ArrowRight className="h-4 w-4" />
@@ -359,7 +322,7 @@ export default async function HomePage() {
             {[
               { icon: BadgeCheck, title: "Verified Owner Badges", text: "Verified listings carry a badge so you know the owner is genuine." },
               { icon: ShieldAlert, title: "Report Suspicious Listings", text: "See a scam? Report any listing and our team reviews it." },
-              { icon: MapPin, title: "Local, City by City", text: "Starting with Kaithal & Pundri. More Haryana cities coming soon." },
+              { icon: MapPin, title: "Local, City by City", text: "Explore Kaithal, Kurukshetra, Pundri and Narwana with listings from local owners." },
             ].map(({ icon: Icon, title, text }) => (
               <div key={title} className="rounded-2xl border border-slate-200 bg-white p-6">
                 <span className="flex h-11 w-11 items-center justify-center rounded-xl bg-teal-50 text-teal-600">
@@ -372,6 +335,20 @@ export default async function HomePage() {
           </div>
         </Container>
       </section>
+
+      <JsonLd
+        data={generateSchemaMarkup("ItemList", {
+          items: latest.properties.map((property) => ({
+            name: property.title,
+            url: `/properties/${property.id}`,
+          })),
+        })}
+      />
+      <JsonLd
+        data={generateSchemaMarkup("LocalBusiness", {
+          cities: SEO_CITIES.map((city) => city.name),
+        })}
+      />
     </>
   );
 }

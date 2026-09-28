@@ -20,6 +20,9 @@ export function getPublicEnv() {
     supabaseBucket: "property-images",
     googleMapsApiKey: process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY ?? "",
     hasGoogleMapsApiKey: !isEmpty(process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY),
+    gaMeasurementId: process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID ?? "",
+    googleSiteVerification: process.env.NEXT_PUBLIC_GOOGLE_SITE_VERIFICATION ?? "",
+    bingSiteVerification: process.env.NEXT_PUBLIC_BING_SITE_VERIFICATION ?? "",
   };
 }
 

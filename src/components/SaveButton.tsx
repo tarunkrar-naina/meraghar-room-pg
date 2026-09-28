@@ -23,7 +23,7 @@ export function SaveButton({
     e.preventDefault();
     e.stopPropagation();
     if (!isLoggedIn) {
-      router.push(`/login?next=/properties/${propertyId}`);
+      router.push(`/login/?next=/properties/${propertyId}/`);
       return;
     }
     startTransition(async () => {

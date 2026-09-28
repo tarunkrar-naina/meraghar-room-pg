@@ -38,7 +38,7 @@ export function AiChat() {
     {
       role: "assistant",
       content:
-        "Namaste! 🙏 Main MeraGhar ka AI Agent hoon. Aapko Kaithal/Pundri mein room, PG, flat ya property dhundhne mein madad kar sakta hoon. Kya poochna chahenge?",
+        "Namaste! 🙏 Main MeraGhar ka AI Agent hoon. Aapko Kaithal, Kurukshetra, Pundri ya Narwana mein room, PG, flat ya property dhundhne mein madad kar sakta hoon. Kya poochna chahenge?",
     },
   ]);
   const [input, setInput] = useState("");

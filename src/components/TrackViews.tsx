@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef } from "react";
+import { trackEvent } from "@/lib/analytics";
 
 /**
  * Client view tracker. Fires a single fire-and-forget POST to /api/log-view
@@ -23,6 +24,8 @@ export function TrackViews({ id }: { id: string }) {
     }).catch(() => {
       // view logging must never throw in the browser
     });
+
+    trackEvent("view_item", { item_id: id });
   }, [id]);
 
   return null;

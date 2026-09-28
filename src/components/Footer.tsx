@@ -20,8 +20,8 @@ export async function Footer() {
               </span>
             </div>
             <p className="mt-3 text-sm text-slate-500">
-              MeraGhar is the local property marketplace for Kaithal &amp; Pundri, Haryana.
-              Rent, buy, or list your property — all in one place, absolutely free.
+               MeraGhar is the local property marketplace for Kaithal, Kurukshetra, Pundri &amp; Narwana, Haryana.
+               Rent, buy, or list your property — all in one place, absolutely free.
             </p>
           </div>
 
@@ -30,9 +30,11 @@ export async function Footer() {
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li><Link className="hover:text-teal-600" href="/properties?purpose=rent">Rent Properties</Link></li>
               <li><Link className="hover:text-teal-600" href="/properties?purpose=sale">Buy Properties</Link></li>
-              <li><Link className="hover:text-teal-600" href="/properties">All Properties</Link></li>
-              <li><Link className="hover:text-teal-600" href="/requirements">Requirements</Link></li>
-              <li><Link className="hover:text-teal-600" href="/help">Help & Support</Link></li>
+              <li><Link className="hover:text-teal-600" href="/properties/">All Properties</Link></li>
+              <li><Link className="hover:text-teal-600" href="/requirements/">Requirements</Link></li>
+              <li><Link className="hover:text-teal-600" href="/about/">About MeraGhar</Link></li>
+              <li><Link className="hover:text-teal-600" href="/contact/">Contact</Link></li>
+              <li><Link className="hover:text-teal-600" href="/how-it-works/">How It Works</Link></li>
             </ul>
           </div>
 
@@ -40,8 +42,9 @@ export async function Footer() {
             <h4 className="text-sm font-semibold text-slate-900">Services</h4>
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               <li><Link className="hover:text-teal-600" href="/post-requirement">Post Requirement</Link></li>
-              <li><Link className="hover:text-teal-600" href="/requirements">Property Requests</Link></li>
-              <li><Link className="hover:text-teal-600" href="/help">Help & Support</Link></li>
+              <li><Link className="hover:text-teal-600" href="/requirements/">Property Requests</Link></li>
+              <li><Link className="hover:text-teal-600" href="/how-it-works/">How It Works</Link></li>
+              <li><Link className="hover:text-teal-600" href="/contact/">Contact Support</Link></li>
             </ul>
           </div>
 
@@ -50,7 +53,7 @@ export async function Footer() {
             <ul className="mt-3 space-y-2 text-sm text-slate-600">
               {locations.slice(0, 7).map((loc) => (
                 <li key={loc.id}>
-                  <Link className="hover:text-teal-600" href={`/${loc.slug}`}>
+                  <Link className="hover:text-teal-600" href={`/${loc.slug}/`}>
                     {loc.name}
                   </Link>
                 </li>

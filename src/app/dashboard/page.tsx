@@ -5,7 +5,7 @@ import { getAuthUser } from "@/lib/auth";
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Dashboard | MeraGhar",
+  title: "Dashboard",
   description: "Manage your MeraGhar listings, saved properties and requirements.",
 };
 

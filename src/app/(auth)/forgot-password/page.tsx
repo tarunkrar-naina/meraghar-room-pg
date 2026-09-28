@@ -4,7 +4,7 @@ import { AuthCard } from "@/components/auth/AuthCard";
 import { ForgotPasswordForm } from "@/components/auth/ForgotPasswordForm";
 
 export const metadata: Metadata = {
-  title: "Forgot Password | MeraGhar",
+  title: "Forgot Password",
   description: "Reset your MeraGhar account password.",
 };
 

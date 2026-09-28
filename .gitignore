@@ -44,3 +44,5 @@ next-env.d.ts
 /.opencode/
 dev-server.log
 dev-server-err.log
+dev-probe.log
+*.log

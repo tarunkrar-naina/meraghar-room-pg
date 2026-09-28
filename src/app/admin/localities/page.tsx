@@ -4,7 +4,7 @@ import { AdminLocalities } from "@/components/admin/AdminLocalities";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Localities | MeraGhar Admin",
+  title: "Localities",
 };
 
 export default async function AdminLocalitiesPage() {

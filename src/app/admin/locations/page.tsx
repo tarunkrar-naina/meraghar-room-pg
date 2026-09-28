@@ -4,7 +4,7 @@ import { AdminLocations } from "@/components/admin/AdminLocations";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Locations | MeraGhar Admin",
+  title: "Locations",
 };
 
 export const revalidate = 0;

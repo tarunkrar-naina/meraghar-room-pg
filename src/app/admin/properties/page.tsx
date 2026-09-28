@@ -7,7 +7,7 @@ import type { AppPageProps } from "@/types";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Manage Properties | MeraGhar Admin",
+  title: "Manage Properties",
 };
 
 const statuses = ["all", "pending", "approved", "rejected", "rented", "sold"] as const;

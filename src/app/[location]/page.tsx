@@ -1,15 +1,16 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { Container } from "@/components/ui";
-import { getChildLocations, getLocationBySlug, getNearbyLocations, getLocalitiesForCity, locationPath } from "@/lib/locations";
-import { buildLocationMetadata, locationPageTitle, siteUrl } from "@/lib/locations/seo";
+import { getChildLocations, getLocationBySlug, getNearbyLocations, getLocalitiesForCity, locationPath, resolvePropertyPath } from "@/lib/locations";
+import { buildLocationMetadata, locationPageTitle } from "@/lib/locations/seo";
 import { fetchCityStats, fetchPublicProperties } from "@/lib/queries";
 import { getAuthUser } from "@/lib/auth";
 import { fetchFavoriteIds } from "@/lib/queries";
-import { LocationBreadcrumbs } from "@/components/locations/LocationBreadcrumbs";
+import { Breadcrumb } from "@/components/Navigation/Breadcrumb";
+import { CitySelector } from "@/components/CitySelector";
 import { LocationLandingContent } from "@/components/locations/LocationLandingContent";
 import { JsonLd } from "@/components/JsonLd";
-import { breadcrumbJsonLd } from "@/lib/locations/structured-data";
+import { generateSchemaMarkup } from "@/lib/seo";
 import type { AppPageProps } from "@/types";
 
 export const dynamic = "force-dynamic";
@@ -51,7 +52,7 @@ export default async function LocationLandingPage(props: AppPageProps) {
 
   return (
     <Container className="py-6 sm:py-8">
-      <LocationBreadcrumbs items={[{ label: location.name }]} />
+      <Breadcrumb items={[{ name: location.name, href: locationPath(location.slug) }]} />
       <h1 className="text-2xl font-extrabold tracking-tight text-slate-900 sm:text-3xl">
         {locationPageTitle(location)}
       </h1>
@@ -76,11 +77,24 @@ export default async function LocationLandingPage(props: AppPageProps) {
         />
       </div>
 
+      <CitySelector className="mt-12 border-t border-slate-200 pt-10" heading={`More cities near ${location.name}`} />
       <JsonLd
-        data={breadcrumbJsonLd([
-          { name: "Home", url: siteUrl() },
-          { name: `${location.name} properties`, url: `${siteUrl()}${locationPath(location.slug)}` },
-        ])}
+        data={generateSchemaMarkup("ItemList", {
+          // Must be the canonical /{city}/{category}/{slug}/ path. Advertising
+          // /properties/{id} here would point crawlers at a 308 redirect stub.
+          items: await Promise.all(
+            result.properties.map(async (property) => ({
+              name: property.title,
+              url: await resolvePropertyPath(property),
+            }))
+          ),
+        })}
+      />
+      <JsonLd
+        data={generateSchemaMarkup("LocalBusiness", {
+          name: `MeraGhar - Properties in ${location.name}`,
+          cities: [location.name],
+        })}
       />
     </Container>
   );

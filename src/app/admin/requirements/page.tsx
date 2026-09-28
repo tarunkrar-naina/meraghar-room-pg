@@ -6,7 +6,7 @@ import { telLink, whatsappLink } from "@/lib/whatsapp";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Requirements | MeraGhar Admin",
+  title: "Requirements",
 };
 
 export default async function AdminRequirementsPage() {

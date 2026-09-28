@@ -4,7 +4,7 @@ import { AdminReportsTable } from "@/components/admin/AdminReports";
 export const dynamic = "force-dynamic";
 
 export const metadata = {
-  title: "Reports | MeraGhar Admin",
+  title: "Reports",
 };
 
 export default async function AdminReportsPage() {

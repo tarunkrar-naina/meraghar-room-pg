@@ -3,12 +3,14 @@ import Link from "next/link";
 import { Container } from "@/components/ui";
 import { RequirementsBoard } from "@/components/requirements/RequirementsBoard";
 import { fetchRequirements } from "@/lib/queries";
+import { buildCanonicalUrl } from "@/lib/seo";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Requirements | MeraGhar",
-  description: "Browse property requirements in Kaithal and Pundri, or post your own requirement.",
+  title: "Requirements",
+  description: "Browse property requirements in Kaithal, Kurukshetra, Pundri and Narwana, or post your own requirement.",
+  alternates: { canonical: buildCanonicalUrl("/requirements/") },
 };
 
 export default async function RequirementsPage() {
@@ -20,7 +22,7 @@ export default async function RequirementsPage() {
         <div>
           <h1 className="text-2xl font-extrabold tracking-tight text-slate-900">Property requirements</h1>
           <p className="mt-1 text-sm text-slate-500">
-            People looking for properties in Kaithal &amp; Pundri. Post yours and let owners reach you — aapki contact
+            People looking for properties in Kaithal, Kurukshetra, Pundri &amp; Narwana. Post yours and let owners reach you — aapki contact
             details private rehti hain.
           </p>
         </div>

@@ -43,6 +43,7 @@ export async function fetchAdminStats(): Promise<AdminStats> {
 
 export interface AdminPropertyRow {
   id: string;
+  slug: string | null;
   title: string;
   purpose: string;
   property_type: string;
@@ -63,7 +64,7 @@ export async function fetchAdminProperties(status?: string): Promise<AdminProper
 
   let builder = admin
     .from("properties")
-    .select(`id, title, purpose, property_type, price, status, is_featured, is_verified, city, created_at, owner:profiles!properties_owner_id_fkey(name, phone)`)
+    .select(`id, slug, title, purpose, property_type, price, status, is_featured, is_verified, city, created_at, owner:profiles!properties_owner_id_fkey(name, phone)`)
     .order("created_at", { ascending: false })
     .limit(250) as any;
 

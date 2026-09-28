@@ -1,11 +1,15 @@
 import Link from "next/link";
+import Image from "next/image";
 import { ArrowRight, BadgeCheck, BedDouble, Flame, MapPin } from "lucide-react";
 import { cn, formatPriceForCard, propertyTypeLabel, timeAgo } from "@/lib/utils";
 import { FURNISHING_LABELS } from "@/lib/constants";
+import { buildPropertyImageAlt } from "@/lib/seo";
+import { propertyPath } from "@/lib/urls";
 import { SaveButton } from "@/components/SaveButton";
 import type { PropertyCardData } from "@/types";
 
-const propertyLink = (p: { id: string }) => `/properties/${p.id}`;
+/** Keyword-rich canonical detail URL: /{city}/{category}/{slug}/ */
+const propertyLink = (p: PropertyCardData) => propertyPath(p);
 
 export function PropertyCard({
   property,
@@ -38,12 +42,17 @@ export function PropertyCard({
         )}
       >
         {property.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
+          <Image
             src={property.image_url}
-            alt={property.title}
-            loading="lazy"
-            className="h-full w-full object-cover transition-transform duration-300 group-hover:scale-105"
+            alt={buildPropertyImageAlt({
+              property_type: property.property_type,
+              bhk: property.bhk,
+              city: property.city,
+              locality: property.locality,
+            })}
+            fill
+            sizes={isList ? "(min-width: 640px) 18rem, 100vw" : "(min-width: 1024px) 33vw, (min-width: 640px) 50vw, 100vw"}
+            className="object-cover transition-transform duration-300 group-hover:scale-105"
           />
         ) : (
           <div className="flex h-full w-full items-center justify-center bg-gradient-to-br from-teal-100 to-slate-200 text-slate-400">

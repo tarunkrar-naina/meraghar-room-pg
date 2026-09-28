@@ -1,10 +1,19 @@
 "use client";
 
+import Image from "next/image";
 import { useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-export function ImageGallery({ images, title }: { images: string[]; title: string }) {
+export function ImageGallery({
+  images,
+  title,
+  altText,
+}: {
+  images: string[];
+  title: string;
+  altText?: string;
+}) {
   const [active, setActive] = useState(0);
   const scrollRef = useRef<HTMLDivElement>(null);
   const touchStartX = useRef<number | null>(null);
@@ -44,11 +53,17 @@ export function ImageGallery({ images, title }: { images: string[]; title: strin
         onTouchStart={handleTouchStart}
         onTouchEnd={handleTouchEnd}
       >
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
+        <Image
           src={images[index]}
-          alt={`${title} - photo ${index + 1}`}
-          className="aspect-[16/10] w-full object-cover"
+          alt={
+            altText
+              ? `${altText}${images.length > 1 ? ` - photo ${index + 1}` : ""}`
+              : `${title} - photo ${index + 1}`
+          }
+          fill
+          priority
+          sizes="(min-width: 1024px) 60vw, 100vw"
+          className="object-cover"
         />
 
         <button
@@ -82,8 +97,7 @@ export function ImageGallery({ images, title }: { images: string[]; title: strin
                 i === index ? "ring-teal-600" : "ring-transparent opacity-70 hover:opacity-100"
               )}
             >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={src} alt="" className="h-full w-full object-cover" />
+              <Image src={src} alt="" fill sizes="6rem" className="object-cover" />
             </button>
           ))}
         </div>

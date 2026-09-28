@@ -1,21 +1,33 @@
 import { cache } from "react";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
-import { getCategoryBySlug } from "@/lib/locations/catalog";
+import { getCategoryBySlug, propertyCategorySlug } from "@/lib/locations/catalog";
+import {
+  areaCityPath,
+  categoryCityPath,
+  cityPath,
+  propertyPathFromParts,
+  type PropertyUrlSource,
+} from "@/lib/urls";
 import { slugify } from "@/lib/utils";
 import type { LocationRow } from "@/types";
 
-/** Absolute-free helpers to build location URLs (assumes site root). */
-
+/**
+ * Location URL helpers.
+ *
+ * Thin aliases over @/lib/urls so there is exactly one place that knows the
+ * trailing-slash + slug rules. Server-only (imports the Supabase client) — use
+ * @/lib/urls directly from client components.
+ */
 export function locationPath(slug: string): string {
-  return `/${slug.toLowerCase()}`;
+  return cityPath(slug);
 }
 
 export function categoryPath(locationSlug: string, categorySlug: string): string {
-  return `${locationPath(locationSlug)}/${categorySlug}`;
+  return categoryCityPath(locationSlug, categorySlug);
 }
 
 export function areaPath(locationSlug: string, areaSlug: string): string {
-  return `${locationPath(locationSlug)}/${areaSlug}`;
+  return areaCityPath(locationSlug, areaSlug);
 }
 
 /**
@@ -27,6 +39,7 @@ export function areaPath(locationSlug: string, areaSlug: string): string {
 const FALLBACK_LOCATIONS: LocationRow[] = [
   { id: "fb-kaithal", name: "Kaithal", slug: "kaithal", state: "Haryana", country: "India", type: "city", parent_slug: null, nearby: ["pundri", "kurukshetra", "karnal", "panipat"], areas: ["City Centre", "Pehowa Road", "Kurukshetra Road", "Guhla Road", "Division Chowk"], is_active: true, created_at: new Date().toISOString() },
   { id: "fb-pundri", name: "Pundri", slug: "pundri", state: "Haryana", country: "India", type: "town", parent_slug: null, nearby: ["kaithal", "kurukshetra", "karnal"], areas: ["Main Bazaar", "Rajound Road", "Bus Stand Road", "Kaithal Road"], is_active: true, created_at: new Date().toISOString() },
+  { id: "fb-narwana", name: "Narwana", slug: "narwana", state: "Haryana", country: "India", type: "city", parent_slug: null, nearby: ["kaithal", "pundri", "karnal"], areas: ["Business District", "Main Market", "Residential Area"], is_active: true, created_at: new Date().toISOString() },
   { id: "fb-kurukshetra", name: "Kurukshetra", slug: "kurukshetra", state: "Haryana", country: "India", type: "city", parent_slug: null, nearby: ["kaithal", "karnal", "ambala", "pundri"], areas: ["Railway Road", "Pipli Chowk", "Pehowa Chowk", "Ladwa Road", "Sarai Road"], is_active: true, created_at: new Date().toISOString() },
   { id: "fb-karnal", name: "Karnal", slug: "karnal", state: "Haryana", country: "India", type: "city", parent_slug: null, nearby: ["kaithal", "panipat", "kurukshetra"], areas: ["GT Road", "Ramlila Ground", "Mehra Road", "Railway Road", "Kunjpura Road"], is_active: true, created_at: new Date().toISOString() },
   { id: "fb-panipat", name: "Panipat", slug: "panipat", state: "Haryana", country: "India", type: "city", parent_slug: null, nearby: ["karnal", "ambala", "delhi"], areas: ["GT Road", "Krishna Colony", "Model Town", "Motilal Nehru Park", "Madina Chowk"], is_active: true, created_at: new Date().toISOString() },
@@ -105,6 +118,40 @@ export async function resolveAreaBySlug(location: LocationRow, slug: string): Pr
 /** Short helper: is this segment a known location category? */
 export function isCategorySegment(slug: string): boolean {
   return Boolean(getCategoryBySlug(slug.toLowerCase()));
+}
+
+/**
+ * URL slug for a city name, resolved from the locations table.
+ *
+ * `properties.city` is free text while `locations.slug` is admin-managed, so the
+ * two can drift (name "Kaithal" with slug "kaithal-haryana"). Property URLs are
+ * built from the city *name*, so they must resolve back to the *location slug*
+ * or the URL would 404 and the self-heal redirect would loop.
+ */
+export const getLocationSlugForCity = cache(async (city: string): Promise<string> => {
+  const key = city.trim().toLowerCase();
+  if (!key) return "haryana";
+  const all = await fetchActiveLocations();
+  const match =
+    all.find((l) => l.name.trim().toLowerCase() === key) ??
+    all.find((l) => l.slug.toLowerCase() === key) ??
+    all.find((l) => key.includes(l.name.trim().toLowerCase()));
+  return match?.slug ?? slugify(city);
+});
+
+/**
+ * Canonical site path for a property: /{city}/{category}/{slug}/
+ *
+ * Server-side because resolving the city segment needs the locations table.
+ * Every redirect stub and the detail page route through this so they can never
+ * disagree about where a listing lives.
+ */
+export async function resolvePropertyPath(property: PropertyUrlSource): Promise<string> {
+  const [citySlug, category] = await Promise.all([
+    getLocationSlugForCity(property.city),
+    Promise.resolve(propertyCategorySlug(property.property_type, property.purpose)),
+  ]);
+  return propertyPathFromParts(citySlug, category, property.slug || property.id);
 }
 
 export { slugify };

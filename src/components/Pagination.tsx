@@ -21,14 +21,14 @@ export function Pagination({ page, totalPages }: { page: number; totalPages: num
   for (let i = Math.max(1, page - 2); i <= Math.min(totalPages, page + 2); i++) pages.push(i);
 
   return (
-    <nav className="mt-8 flex items-center justify-center gap-1">
+    <nav className="mt-8 flex flex-wrap items-center justify-center gap-1">
       <button
         onClick={() => go(page - 1)}
         disabled={page <= 1}
-        className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+        className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 sm:px-3"
       >
         <ChevronLeft className="h-4 w-4" />
-        Prev
+        <span className="hidden sm:inline">Prev</span>
       </button>
 
       {pages.map((p) => (
@@ -49,9 +49,9 @@ export function Pagination({ page, totalPages }: { page: number; totalPages: num
       <button
         onClick={() => go(page + 1)}
         disabled={page >= totalPages}
-        className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-300 bg-white px-3 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40"
+        className="inline-flex h-9 items-center gap-1 rounded-lg border border-slate-300 bg-white px-2 text-sm font-medium text-slate-600 hover:bg-slate-50 disabled:opacity-40 sm:px-3"
       >
-        Next
+        <span className="hidden sm:inline">Next</span>
         <ChevronRight className="h-4 w-4" />
       </button>
     </nav>

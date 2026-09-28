@@ -111,7 +111,7 @@ export const AMENITIES = [
   "Other",
 ];
 
-export const DEFAULT_CITIES = ["Kaithal", "Pundri", "Karnal", "Kurukshetra"];
+export const DEFAULT_CITIES = ["Kaithal", "Kurukshetra", "Pundri", "Narwana", "Karnal"];
 
 export const SORT_OPTIONS = [
   { value: "newest", label: "Newest first" },
@@ -139,7 +139,7 @@ export const ADMIN_CONTACT_EMAIL = "tarunnaian41@gmail.com";
 export const ADMIN_WHATSAPP_NUMBER = "918950056231";
 
 export const APP_NAME = "MeraGhar";
-export const APP_TAGLINE = "Find Your Perfect Home in Kaithal & Pundri";
+export const APP_TAGLINE = "Find Your Perfect Home in Kaithal, Kurukshetra, Pundri & Narwana";
 export const APP_TAGLINE_HINDI = "Apna Room, Ghar Ya Property Yahan Dhundhiye";
 export const APP_SUBTITLE =
   "Search rooms, PGs, flats, houses, shops and plots for rent or sale — and post your property free.";
