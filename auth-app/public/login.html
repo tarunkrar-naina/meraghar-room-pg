@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login - MeraGhar</title>
+  <meta name="description" content="Apne MeraGhar account mein login karein.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container navbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">M</span>
+        <span>MeraGhar<span class="full"> Auth</span></span>
+      </a>
+      <div class="nav-right" id="nav-right"></div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <div class="container auth-wrap">
+
+      <div class="card">
+        <div class="card-head">
+          <h1>Login karein</h1>
+          <p>Mobile number ya email se login karein</p>
+        </div>
+
+        <div class="alert" id="form-banner"></div>
+
+        <form id="login-form" novalidate>
+          <div class="field">
+            <label class="label" for="identifier">Mobile number ya Email <span class="req">*</span></label>
+            <input class="input" type="text" id="identifier" name="identifier"
+                   autocomplete="username" placeholder="98765 43210" required>
+            <div class="field-error" id="identifier-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="password">Password <span class="req">*</span></label>
+            <div class="input-group">
+              <input class="input" type="password" id="password" name="password"
+                     autocomplete="current-password" placeholder="Apna password" required>
+              <span class="prefix">
+                <button type="button" id="toggle-password" class="btn btn-outline">Show</button>
+              </span>
+            </div>
+            <div class="field-error" id="password-error"></div>
+          </div>
+
+          <div class="form-row">
+            <label class="check">
+              <input type="checkbox" id="rememberMe" name="rememberMe" checked>
+              <span>Remember me (7 din)</span>
+            </label>
+            <a href="/forgot-password">Password bhool gaye?</a>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Login</button>
+
+          <p class="muted text-center mt-2 mb-0">
+            Naya account banana hai? <a href="/signup">Sign up</a>
+          </p>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">&copy; <span id="year">2026</span> MeraGhar</div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

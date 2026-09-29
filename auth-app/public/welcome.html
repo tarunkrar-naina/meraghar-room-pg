@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Welcome back - MeraGhar</title>
+  <!-- Returning users should never see this page in a search result. -->
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container navbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">M</span>
+        <span>MeraGhar<span class="full"> Auth</span></span>
+      </a>
+      <div class="nav-right" id="nav-right"></div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <div class="container auth-wrap">
+
+      <!-- Replaced by common.js once the session has been checked. -->
+      <div class="card welcome-card">
+        <div id="welcome-loader">
+          <div class="spinner spinner-dark spinner-xl"></div>
+        </div>
+
+        <!-- Everything below is built with DOM APIs in auth.js. -->
+        <div id="welcome-box"></div>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">&copy; <span id="year">2026</span> MeraGhar</div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Sign up - MeraGhar</title>
+  <meta name="description" content="MeraGhar pe naya account banayein - free, 30 seconds.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container navbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">M</span>
+        <span>MeraGhar<span class="full"> Auth</span></span>
+      </a>
+      <div class="nav-right" id="nav-right"></div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <div class="container auth-wrap">
+
+      <div class="card">
+        <div class="card-head">
+          <h1>Account banayein</h1>
+          <p>Naya account banayein, bahut aasan hai. / Create your free account</p>
+        </div>
+
+        <!-- One alert box reused for every kind of failure. -->
+        <div class="alert" id="form-banner"></div>
+
+        <form id="signup-form" novalidate>
+          <div class="field">
+            <label class="label" for="name">Poora naam <span class="req">*</span></label>
+            <input class="input" type="text" id="name" name="name"
+                   autocomplete="name" placeholder="e.g. Naina Rani" required>
+            <div class="field-error" id="name-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="mobile">Mobile number <span class="req">*</span></label>
+            <div class="input-group">
+              <span class="prefix">+91</span>
+              <input class="input" type="tel" id="mobile" name="mobile"
+                     inputmode="numeric" maxlength="10"
+                     autocomplete="tel-national" placeholder="98765 43210" required>
+            </div>
+            <div class="field-error" id="mobile-error"></div>
+            <div class="hint">10 digits, 6 se 9 ke beech shuru hona chahiye.</div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="email">Email <span class="req">*</span></label>
+            <input class="input" type="email" id="email" name="email"
+                   autocomplete="email" placeholder="you@example.com" required>
+            <div class="field-error" id="email-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="password">Password <span class="req">*</span></label>
+            <input class="input" type="password" id="password" name="password"
+                   autocomplete="new-password" placeholder="Kam se kam 8 characters" required>
+            <div class="field-error" id="password-error"></div>
+            <div class="hint" id="pw-meter"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="confirmPassword">Confirm password <span class="req">*</span></label>
+            <input class="input" type="password" id="confirmPassword" name="confirmPassword"
+                   autocomplete="new-password" placeholder="Password dobara likhein" required>
+            <div class="field-error" id="confirmPassword-error"></div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Create account</button>
+
+          <p class="muted text-center mt-2 mb-0">
+            Pehle se account hai? <a href="/login">Login karein</a>
+          </p>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">&copy; <span id="year">2026</span> MeraGhar</div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/auth.js"></script>
+</body>
+</html>

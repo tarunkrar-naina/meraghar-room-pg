@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Edit Profile - MeraGhar</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <nav class="navbar">
+    <div class="container navbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">M</span>
+        <span>MeraGhar<span class="full"> Auth</span></span>
+      </a>
+      <div class="nav-right" id="nav-right"></div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <div class="container container-narrow">
+
+      <div class="card">
+        <div class="card-head">
+          <h1>Profile edit karein</h1>
+          <p>Apni details update karein</p>
+        </div>
+
+        <!-- Shown right after signup. -->
+        <div class="alert" id="welcome-banner"></div>
+        <div class="alert" id="form-banner"></div>
+
+        <!-- ---------- Profile photo ---------- -->
+        <div class="photo-section">
+          <h2 class="mb-2">Profile photo</h2>
+          <div class="photo-row">
+            <!-- Filled by profile.js with the current photo or initials. -->
+            <div id="photo-preview"></div>
+            <div>
+              <!-- Hidden file input, opened by the label below. -->
+              <input class="file-input-hidden" type="file" id="photo-input"
+                     accept="image/jpeg,image/png">
+              <label class="btn btn-outline" for="photo-input">Photo choose karein</label>
+              <p class="hint mb-0">JPG ya PNG, 2MB se chhoti. Nayi photo se purani replace ho jayegi.</p>
+              <p class="hint" id="photo-status"></p>
+            </div>
+          </div>
+        </div>
+
+        <!-- ---------- Details ---------- -->
+        <form id="edit-form" novalidate>
+          <div class="field">
+            <label class="label" for="name">Poora naam <span class="req">*</span></label>
+            <input class="input" type="text" id="name" autocomplete="name" required>
+            <div class="field-error" id="name-error"></div>
+          </div>
+
+          <!-- mobile and email are the account identity, so they are read-only
+               here. Changing them needs a separate OTP verification flow. -->
+          <div class="field">
+            <label class="label" for="mobile-view">Mobile number</label>
+            <input class="input" type="text" id="mobile-view" disabled>
+            <div class="hint">Mobile number yahan se change nahi hota.</div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="email-view">Email</label>
+            <input class="input" type="text" id="email-view" disabled>
+            <div class="hint">Email yahan se change nahi hota.</div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="city">City</label>
+            <input class="input" type="text" id="city" placeholder="e.g. Kaithal">
+            <div class="field-error" id="city-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="state">State</label>
+            <input class="input" type="text" id="state" placeholder="e.g. Haryana">
+            <div class="field-error" id="state-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="pincode">Pincode</label>
+            <input class="input" type="text" id="pincode" inputmode="numeric" maxlength="6"
+                   placeholder="136001">
+            <div class="field-error" id="pincode-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="address">Address</label>
+            <textarea class="textarea" id="address" maxlength="300"
+                      placeholder="Ghar ka pata"></textarea>
+            <div class="field-error" id="address-error"></div>
+          </div>
+
+          <div class="field">
+            <label class="label" for="about">About me</label>
+            <textarea class="textarea" id="about" maxlength="500"
+                      placeholder="Apne baare me thoda likhein"></textarea>
+            <div class="field-error" id="about-error"></div>
+          </div>
+
+          <button class="btn btn-primary btn-block btn-lg" type="submit">Save changes</button>
+          <a class="btn btn-outline btn-block mt-1" href="/profile">Cancel</a>
+        </form>
+      </div>
+
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">&copy; <span id="year">2026</span> MeraGhar</div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+  <script src="/js/profile.js"></script>
+</body>
+</html>

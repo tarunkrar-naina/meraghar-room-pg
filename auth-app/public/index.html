@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MeraGhar Auth - Login, Signup &amp; User Profile</title>
+  <meta name="description" content="MeraGhar authentication and user profile system - Express, Supabase, JWT and bcrypt.">
+  <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+
+  <!-- Navbar. #nav-right is filled in by common.js depending on the session. -->
+  <nav class="navbar">
+    <div class="container navbar-inner">
+      <a class="brand" href="/">
+        <span class="brand-mark">M</span>
+        <span>MeraGhar<span class="full"> Auth</span></span>
+      </a>
+      <div class="nav-right" id="nav-right"></div>
+    </div>
+  </nav>
+
+  <main class="page">
+    <section class="hero">
+      <div class="container">
+        <h1>MeraGhar pe apna account banayein</h1>
+        <p>
+          Apni profile banayein, property post karein aur buyers se seedha connect karein.
+          Create your account in under a minute.
+        </p>
+        <div class="hero-actions">
+          <a class="btn btn-primary btn-lg" href="/signup">Create account</a>
+          <a class="btn btn-ghost btn-lg" href="/login">Login</a>
+        </div>
+      </div>
+    </section>
+
+    <div class="container">
+      <div class="feature-grid">
+        <div class="feature">
+          <div class="icon">&#128100;</div>
+          <h3>One profile, everywhere</h3>
+          <p>Naam, mobile, city, address aur photo ek jagah - har baar dobara mat bharayein.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">&#128274;</div>
+          <h3>Secure login</h3>
+          <p>Password bcrypt se hash hota hai aur session httpOnly cookie mein rehta hai.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">&#9889;</div>
+          <h3>Ek click welcome back</h3>
+          <p>Wapas aate hi aapka account yaad aa jayega - password dobara type karna padega.</p>
+        </div>
+        <div class="feature">
+          <div class="icon">&#128444;</div>
+          <h3>Profile photo</h3>
+          <p>JPG ya PNG, 2MB tak. Purani photo hata dete hain, disk saaf rehta hai.</p>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <footer class="footer">
+    <div class="container">
+      &copy; <span id="year">2026</span> MeraGhar &middot;
+      <a href="/login">Login</a> &middot;
+      <a href="/signup">Sign up</a>
+    </div>
+  </footer>
+
+  <script src="/js/common.js"></script>
+</body>
+</html>

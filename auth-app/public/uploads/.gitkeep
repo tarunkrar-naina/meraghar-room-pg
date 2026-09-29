@@ -1,0 +1,4 @@
+# This folder holds uploaded profile photos.
+# Everything in here is gitignored (see ../../.gitignore) except this file,
+# which keeps the empty folder in the repository so multer always has a
+# directory to write into.

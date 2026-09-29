@@ -1,0 +1,19 @@
+# Dependencies
+node_modules/
+
+# Secrets - never commit these
+.env
+.env.local
+.env.*.local
+
+# Uploaded profile photos are user data, not source code
+public/uploads/*
+!public/uploads/.gitkeep
+
+# Logs
+*.log
+npm-debug.log*
+
+# OS noise
+.DS_Store
+Thumbs.db
