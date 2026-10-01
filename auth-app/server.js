@@ -32,7 +32,7 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const multer = require("multer");
 
-const { isDbConfigured, checkSchema } = require("./config/db");
+const { isDbConfigured, checkSchema, DatabaseError } = require("./config/db");
 
 const authRoutes = require("./routes/auth");
 const profileRoutes = require("./routes/profile");
@@ -100,8 +100,41 @@ app.use(morgan("dev"));
 /**
  * public/ is served as-is. index.html answers "/", so the site is browsable
  * straight from http://localhost:4000 with no build step.
+ *
+ * `index: false` disables the automatic directory-index behaviour, because we
+ * serve clean URLs explicitly below and don't want /css or /uploads to answer
+ * with a directory listing.
  */
-app.use(express.static(path.join(__dirname, "public")));
+app.use(express.static(path.join(__dirname, "public"), { index: false }));
+
+/* ------------------------------------------------------------------ */
+/* Clean page URLs                                                     */
+/* ------------------------------------------------------------------ */
+/**
+ * The spec asks for /signup, /login and /profile - without the .html.
+ * express.static only answers /signup.html, so each extensionless URL is
+ * mapped to its file here.
+ *
+ * This is an explicit allow-list rather than blindly appending ".html" to
+ * whatever was requested: appending blindly would happily serve
+ * `/.env.example` or `/server.js` style paths through URL tricks. Only the
+ * names listed here can ever be reached.
+ */
+const PAGES = {
+  "/": "index.html",
+  "/signup": "signup.html",
+  "/login": "login.html",
+  "/welcome": "welcome.html",
+  "/profile": "profile.html",
+  "/edit-profile": "edit-profile.html",
+  "/forgot-password": "forgot-password.html",
+};
+
+for (const [url, file] of Object.entries(PAGES)) {
+  app.get(url, (_req, res) => {
+    res.sendFile(path.join(__dirname, "public", file));
+  });
+}
 
 /* ------------------------------------------------------------------ */
 /* API routes                                                          */
@@ -157,6 +190,15 @@ app.use((err, req, res, next) => {
   // A bad JSON body arrives as a SyntaxError from express.json().
   if (err instanceof SyntaxError && "body" in err) {
     return res.status(400).json({ ok: false, code: "BAD_JSON", message: "Request theek nahi hai." });
+  }
+
+  // Database problems are almost always a setup step that was missed (schema
+  // not applied, wrong key), so we answer with the actual instruction instead
+  // of a generic 500 that sends people hunting through their own code.
+  if (err instanceof DatabaseError) {
+    const status = err.code === "DB_MISSING" ? 503 : 500;
+    if (status === 500) console.error("[db]", err.code, err.message);
+    return res.status(status).json({ ok: false, code: err.code, message: err.message });
   }
 
   console.error("[error]", err);

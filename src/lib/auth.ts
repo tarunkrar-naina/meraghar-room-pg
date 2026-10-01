@@ -24,6 +24,9 @@ export async function getAuthUser(): Promise<AuthUser | null> {
     .eq("id", user.id)
     .maybeSingle();
 
+  // A blocked account keeps its Supabase session but must behave as signed out.
+  if (profile?.is_blocked) return null;
+
   return { id: user.id, email: user.email ?? "", profile };
 }
 
@@ -49,6 +52,11 @@ export const requireAdmin = async (): Promise<AuthUser> => {
   }
   return user;
 };
+
+/** Where an admin should land after a successful login. */
+export function adminHomePath(): string {
+  return "/admin";
+}
 
 /** Returns the path the user should be sent to after login (defaults to /). */
 export function defaultPostLoginPath(profile: ProfileRow | null, fallback: string | null): string {

@@ -1,8 +1,9 @@
 "use client";
 
 import { useTransition } from "react";
+import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { CheckCircle2, Eye, Flame, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
+import { CheckCircle2, Eye, Flame, Pencil, ShieldCheck, ShieldOff, Trash2 } from "lucide-react";
 import { cn, formatINR, timeAgo } from "@/lib/utils";
 import { propertyPath } from "@/lib/urls";
 import { useToast } from "@/components/Toast";
@@ -70,6 +71,12 @@ export function AdminPropertiesTable({ rows }: { rows: AdminPropertyRow[] }) {
               </td>
               <td className="whitespace-nowrap px-4 py-3 text-right">
                 <div className="flex flex-wrap items-center justify-end gap-1">
+                  <Link
+                    href={`/admin/properties/${r.id}/edit`}
+                    className="inline-flex items-center gap-1 rounded-lg border border-teal-200 bg-teal-50 px-2 py-1 text-xs font-semibold text-teal-700 hover:bg-teal-100"
+                  >
+                    <Pencil className="h-3.5 w-3.5" /> Edit
+                  </Link>
                   <a href={propertyPath(r)} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1 rounded-lg border border-slate-200 px-2 py-1 text-xs font-medium text-slate-600 hover:bg-slate-50">
                     <Eye className="h-3.5 w-3.5" /> View
                   </a>

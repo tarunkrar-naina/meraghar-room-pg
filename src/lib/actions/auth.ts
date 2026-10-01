@@ -1,7 +1,9 @@
 "use server";
 
-import { createClient, type SupabaseClient } from "@supabase/supabase-js";
-import { getPublicEnv } from "@/lib/env";
+import { headers } from "next/headers";
+import { createSupabaseServerClient, createSupabaseAdminClient } from "@/lib/supabase/server";
+import { getPublicEnv, isAllowedAdminEmail } from "@/lib/env";
+import { clearRateLimit, rateLimited } from "@/lib/rate-limit";
 
 export type AuthActionResult = {
   ok: boolean;
@@ -12,24 +14,212 @@ export type AuthActionResult = {
     created_at: string;
   } | null;
   error?: string;
+  /** Set when signup succeeded but the address still needs confirming. */
+  needsEmailConfirmation?: boolean;
 };
 
+const LOGIN_WINDOW_MS = 15 * 60 * 1000;
+const LOGIN_MAX_ATTEMPTS = 5;
+
+/** Best-effort client IP so repeated failed logins can be throttled per caller. */
+async function requestIp(): Promise<string> {
+  try {
+    const h = await headers();
+    const fwd = h.get("x-forwarded-for");
+    if (fwd) return fwd.split(",")[0]!.trim();
+    return h.get("x-real-ip") ?? "unknown";
+  } catch {
+    return "unknown";
+  }
+}
+
 /**
- * Sign out the current session. Because auth here is table-based (no
- * Supabase Auth session/JWT), signing out simply returns a success result —
- * the client removes auth state in the browser. Returns `{ ok: true }` on
- * success, otherwise `{ ok: false, error }`.
+ * Sign in with Supabase Auth.
+ *
+ * The session cookie is written by `createSupabaseServerClient()`'s `setAll`
+ * callback, so `getAuthUser()` picks the user up on the very next request.
+ * Passwords are hashed by Supabase - nothing plaintext is stored or compared.
  */
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<AuthActionResult> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      ok: false,
+      error:
+        "Supabase is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local",
+    };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  if (!normalizedEmail || !password) {
+    return { ok: false, error: "Email and password are required." };
+  }
+
+  const throttleKey = `login:${await requestIp()}:${normalizedEmail}`;
+  if (rateLimited(throttleKey, LOGIN_MAX_ATTEMPTS, LOGIN_WINDOW_MS)) {
+    return {
+      ok: false,
+      error: "Too many failed attempts. Please try again in 15 minutes.",
+    };
+  }
+
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: normalizedEmail,
+    password,
+  });
+
+  if (error || !data.user) {
+    // Supabase returns the same generic message for unknown email and wrong
+    // password, so nothing about account existence is leaked.
+    return {
+      ok: false,
+      error: "Incorrect email or password. Please try again.",
+    };
+  }
+
+  const user = data.user;
+  // The limiter counts attempts, so a correct password has to clear the history
+  // or five successful logins would look like five failures.
+  clearRateLimit(throttleKey);
+
+  return {
+    ok: true,
+    user: {
+      id: user.id,
+      email: user.email ?? normalizedEmail,
+      name: (user.user_metadata?.name as string | undefined) ?? "",
+      created_at: user.created_at ?? new Date().toISOString(),
+    },
+  };
+}
+
+/**
+ * Admin-only variant of `signInWithEmail`.
+ *
+ * A successful password check is not enough for the panel: the address must be
+ * on the ADMIN_EMAILS allowlist *and* the profiles row must say `admin`. Both
+ * are checked server-side right after sign-in, and the session is torn down
+ * immediately when they fail - so a normal user can never reach the 2FA prompt
+ * or the admin pages from this form.
+ */
+export async function signInAdmin(
+  email: string,
+  password: string
+): Promise<AuthActionResult> {
+  const result = await signInWithEmail(email, password);
+  if (!result.ok) return result;
+
+  const supabase = await createSupabaseServerClient();
+  const admin = createSupabaseAdminClient();
+  const signedInEmail = result.user?.email ?? email.trim().toLowerCase();
+
+  let allowed = isAllowedAdminEmail(signedInEmail);
+  let roleIsAdmin = false;
+
+  if (allowed && admin && result.user?.id) {
+    const { data: profile } = await admin
+      .from("profiles")
+      .select("role")
+      .eq("id", result.user.id)
+      .maybeSingle();
+    roleIsAdmin = profile?.role === "admin";
+    allowed = roleIsAdmin;
+  }
+
+  if (!allowed) {
+    // The session is real but useless here - drop it before returning so the
+    // browser cannot keep a signed-in non-admin around.
+    await supabase?.auth.signOut();
+    return {
+      ok: false,
+      error: roleIsAdmin
+        ? "This account is not on the ADMIN_EMAILS allowlist."
+        : "This account does not have admin access.",
+    };
+  }
+
+  return result;
+}
+
+/**
+ * Create a new account. Supabase Auth hashes the password; the existing
+ * `on_auth_user_created` database trigger creates the matching `profiles` row.
+ *
+ * The role is never taken from user input - a new signup is always a `user`.
+ * Admin access is granted only by the ADMIN_EMAILS allowlist.
+ */
+export async function signUpWithEmail(
+  email: string,
+  password: string,
+  name: string,
+  phone?: string
+): Promise<AuthActionResult> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) {
+    return {
+      ok: false,
+      error:
+        "Supabase is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in .env.local",
+    };
+  }
+
+  const normalizedEmail = email.trim().toLowerCase();
+  const trimmedName = name.trim();
+
+  if (!normalizedEmail || !password || !trimmedName) {
+    return { ok: false, error: "Name, email and password are required." };
+  }
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
+    return { ok: false, error: "Please enter a valid email address." };
+  }
+  if (password.length < 8) {
+    return { ok: false, error: "Password must be at least 8 characters." };
+  }
+
+  const { data, error } = await supabase.auth.signUp({
+    email: normalizedEmail,
+    password,
+    options: {
+      data: {
+        name: trimmedName,
+        phone: phone?.trim() || undefined,
+        role: "user",
+      },
+    },
+  });
+
+  if (error) {
+    if (/already registered|already been registered|duplicate/i.test(error.message)) {
+      return { ok: false, error: "An account with this email already exists." };
+    }
+    return { ok: false, error: error.message };
+  }
+
+  // When email confirmation is enabled there is no session yet - the user must
+  // confirm the address before they can log in.
+  if (!data.session || !data.user) {
+    return { ok: true, user: null, needsEmailConfirmation: true };
+  }
+
+  return {
+    ok: true,
+    user: {
+      id: data.user.id,
+      email: data.user.email ?? normalizedEmail,
+      name: trimmedName,
+      created_at: data.user.created_at ?? new Date().toISOString(),
+    },
+  };
+}
+
+/** Ends the session and clears its cookies. */
 export async function signOut(): Promise<AuthActionResult> {
   try {
-    const supabase = createSupabaseClient();
-    if (!supabase) {
-      return {
-        ok: false,
-        error:
-          "Supabase is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local.",
-      };
-    }
+    const supabase = await createSupabaseServerClient();
+    if (!supabase) return { ok: false, error: "Supabase is not configured." };
 
     const { error } = await supabase.auth.signOut();
     if (error) return { ok: false, error: error.message };
@@ -37,26 +227,19 @@ export async function signOut(): Promise<AuthActionResult> {
   } catch (err) {
     return {
       ok: false,
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
+      error: err instanceof Error ? err.message : "An unexpected error occurred.",
     };
   }
 }
 
-/**
- * Request a password-reset email. Requires Supabase Auth (email recovery to
- * be enabled on the project). Returns `{ ok: true }` when the reset email
- * was queued, otherwise `{ ok: false, error }`.
- */
+/** Queues a password-reset email that links to /update-password. */
 export async function forgotPassword(email: string): Promise<AuthActionResult> {
   try {
-    const supabase = createSupabaseClient();
+    const supabase = await createSupabaseServerClient();
     if (!supabase) return { ok: false, error: "Supabase is not configured." };
 
     const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail) {
-      return { ok: false, error: "Email is required." };
-    }
+    if (!normalizedEmail) return { ok: false, error: "Email is required." };
 
     const { error } = await supabase.auth.resetPasswordForEmail(normalizedEmail, {
       redirectTo: `${getPublicEnv().siteUrl}/update-password`,
@@ -66,20 +249,15 @@ export async function forgotPassword(email: string): Promise<AuthActionResult> {
   } catch (err) {
     return {
       ok: false,
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
+      error: err instanceof Error ? err.message : "An unexpected error occurred.",
     };
   }
 }
 
-/**
- * Update the password for the logged-in user (used after visiting the
- * password-recovery link). Requires an active Supabase Auth session.
- * Returns `{ ok: true }` on success, otherwise `{ ok: false, error }`.
- */
+/** Sets a new password for the currently logged-in user. */
 export async function updatePassword(newPassword: string): Promise<AuthActionResult> {
   try {
-    const supabase = createSupabaseClient();
+    const supabase = await createSupabaseServerClient();
     if (!supabase) return { ok: false, error: "Supabase is not configured." };
 
     if (!newPassword || newPassword.length < 8) {
@@ -92,203 +270,17 @@ export async function updatePassword(newPassword: string): Promise<AuthActionRes
   } catch (err) {
     return {
       ok: false,
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
-    };
-  }
-}
-
-/** Shape of a row in the `users` table. */
-type UserRow = {
-  id: string;
-  email: string;
-  password: string;
-  name: string;
-  created_at: string;
-};
-
-/**
- * Creates a plain Supabase client bound to the *public* anon key.
- * Server-only (never import into a Client Component). Uses only the two
- * env vars `NEXT_PUBLIC_SUPABASE_URL` and `NEXT_PUBLIC_SUPABASE_ANON_KEY`.
- * Returns null when Supabase is not configured.
- */
-function createSupabaseClient(): SupabaseClient | null {
-  const env = getPublicEnv();
-  if (!env.isSupabaseConfigured) return null;
-  return createClient(env.supabaseUrl, env.supabaseAnonKey);
-}
-
-/**
- * Sign in: look up the user by email in the `users` table, then verify the
- * password. Returns `{ ok: true, user }` on success, otherwise
- * `{ ok: false, error }`.
- *
- * NOTE: Your `users` table currently stores plaintext passwords (test data:
- * `password123`). This compares plaintext values so it works out of the box.
- * For production, ALWAYS store hashed passwords (e.g. bcrypt/argon2) and
- * compare the hash here instead of storing raw passwords.
- */
-export async function signInWithEmail(
-  email: string,
-  password: string
-): Promise<AuthActionResult> {
-  try {
-    const supabase = createSupabaseClient();
-    if (!supabase) {
-      return {
-        ok: false,
-        error:
-          "Supabase is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local.",
-      };
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    if (!normalizedEmail || !password) {
-      return { ok: false, error: "Email and password are required." };
-    }
-
-    // Find the user by email.
-    const { data, error } = await supabase
-      .from("users")
-      .select("id,email,password,name,created_at")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-
-    if (error) {
-      return {
-        ok: false,
-        error:
-          error.code === "42501"
-            ? "Access denied by row-level security on the `users` table."
-            : error.message,
-      };
-    }
-
-    if (!data) {
-      return { ok: false, error: "No account found with this email." };
-    }
-
-    const user = data as unknown as UserRow;
-
-    // Plaintext password match (see security note above).
-    if (user.password !== password) {
-      return { ok: false, error: "Incorrect password. Please try again." };
-    }
-
-    return {
-      ok: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        created_at: user.created_at,
-      },
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
+      error: err instanceof Error ? err.message : "An unexpected error occurred.",
     };
   }
 }
 
 /**
- * Sign up: reject duplicate emails, then insert a new row into the `users`
- * table. Returns `{ ok: true, user }` on success, otherwise
- * `{ ok: false, error }`.
- *
- * `phone` is accepted for backwards compatibility with the existing
- * SignupForm, but is not persisted (the `users` table has no phone column).
+ * Signs an account out by email. Used by the admin guard to eject a signed-in
+ * user whose address is not on the ADMIN_EMAILS allowlist.
  */
-export async function signUpWithEmail(
-  email: string,
-  password: string,
-  name: string,
-  _phone?: string
-): Promise<AuthActionResult> {
-  try {
-    const supabase = createSupabaseClient();
-    if (!supabase) {
-      return {
-        ok: false,
-        error:
-          "Supabase is not configured. Check NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY in your .env.local.",
-      };
-    }
-
-    const normalizedEmail = email.trim().toLowerCase();
-    const trimmedName = name.trim();
-
-    if (!normalizedEmail || !password || !trimmedName) {
-      return { ok: false, error: "Name, email and password are required." };
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(normalizedEmail)) {
-      return { ok: false, error: "Please enter a valid email address." };
-    }
-    if (password.length < 8) {
-      return { ok: false, error: "Password must be at least 8 characters." };
-    }
-
-    // 1) Duplicate email check.
-    const { data: existing, error: lookupError } = await supabase
-      .from("users")
-      .select("id")
-      .eq("email", normalizedEmail)
-      .maybeSingle();
-
-    if (lookupError) {
-      return {
-        ok: false,
-        error:
-          lookupError.code === "42501"
-            ? "Access denied by row-level security on the `users` table."
-            : lookupError.message,
-      };
-    }
-
-    if (existing) {
-      return { ok: false, error: "An account with this email already exists." };
-    }
-
-    // 2) Insert the new user. `created_at` defaults to now() in the DB.
-    const { data: created, error: insertError } = await supabase
-      .from("users")
-      .insert({
-        email: normalizedEmail,
-        password,
-        name: trimmedName,
-      })
-      .select("id,email,password,name,created_at")
-      .single();
-
-    if (insertError) {
-      return {
-        ok: false,
-        error:
-          insertError.code === "42501"
-            ? "Access denied by row-level security on the `users` table."
-            : insertError.message,
-      };
-    }
-
-    const user = created as unknown as UserRow;
-
-    return {
-      ok: true,
-      user: {
-        id: user.id,
-        email: user.email,
-        name: user.name,
-        created_at: user.created_at,
-      },
-    };
-  } catch (err) {
-    return {
-      ok: false,
-      error:
-        err instanceof Error ? err.message : "An unexpected error occurred.",
-    };
-  }
+export async function revokeSession(): Promise<void> {
+  const supabase = await createSupabaseServerClient();
+  if (!supabase) return;
+  await supabase.auth.signOut();
 }

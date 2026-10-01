@@ -16,6 +16,7 @@ export type Database = {
           phone: string;
           avatar_url: string | null;
           role: "user" | "admin";
+          is_blocked: boolean;
           created_at: string;
         };
         Insert: {
@@ -25,6 +26,7 @@ export type Database = {
           phone?: string;
           avatar_url?: string | null;
           role?: "user" | "admin";
+          is_blocked?: boolean;
           created_at?: string;
         };
         Update: {
@@ -34,6 +36,7 @@ export type Database = {
           phone?: string;
           avatar_url?: string | null;
           role?: "user" | "admin";
+          is_blocked?: boolean;
           created_at?: string;
         };
         Relationships: [
@@ -45,6 +48,87 @@ export type Database = {
             referencedColumns: ["id"];
           }
         ];
+      };
+      site_settings: {
+        Row: {
+          key: string;
+          value: string | null;
+          default_value: string | null;
+          label: string;
+          group: string;
+          updated_by: string | null;
+          updated_at: string;
+        };
+        Insert: {
+          key: string;
+          value?: string | null;
+          default_value?: string | null;
+          label?: string;
+          group?: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Update: {
+          value?: string | null;
+          default_value?: string | null;
+          label?: string;
+          group?: string;
+          updated_by?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+      admin_audit_log: {
+        Row: {
+          id: string;
+          admin_email: string;
+          action: string;
+          target: string | null;
+          details: unknown | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          admin_email: string;
+          action: string;
+          target?: string | null;
+          details?: unknown | null;
+          created_at?: string;
+        };
+        Update: never;
+        Relationships: [];
+      };
+      admin_deployments: {
+        Row: {
+          id: string;
+          deployment_id: string;
+          status: string;
+          url: string | null;
+          inspector_url: string | null;
+          error_message: string | null;
+          triggered_by: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          deployment_id?: string;
+          status?: string;
+          url?: string | null;
+          inspector_url?: string | null;
+          error_message?: string | null;
+          triggered_by?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          status?: string;
+          url?: string | null;
+          inspector_url?: string | null;
+          error_message?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
       };
       localities: {
         Row: {

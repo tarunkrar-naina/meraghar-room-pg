@@ -18,6 +18,7 @@ const rateLimit = require("express-rate-limit");
 const ctrl = require("../controllers/authController");
 const { validate } = require("../middleware/validate");
 const { optionalAuth } = require("../middleware/auth");
+const { limiterDisabled, limiterMax } = require("../config/rateLimit");
 
 const router = express.Router();
 
@@ -27,13 +28,15 @@ const router = express.Router();
  * Brute-forcing a password means many login attempts, and creating throwaway
  * accounts means many signup attempts, so both routes are limited hard.
  * 10 attempts per 15 minutes per IP is enough for a real person and useless
- * for an attacker.
+ * for an attacker. The smoke test needs more than that in one go, so the
+ * ceiling is overridable - see config/rateLimit.js.
  */
 const credentialLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 10,
+  max: limiterMax(10),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => limiterDisabled(),
   message: {
     ok: false,
     code: "RATE_LIMITED",
@@ -119,6 +122,12 @@ router.post(
 
 /** POST /api/auth/logout - clears the session cookies. */
 router.post("/logout", ctrl.logout);
+
+/**
+ * POST /api/auth/forget - clears ONLY the remembered identifier cookie.
+ * Backs "Use a different account"; the user stays logged in if they were.
+ */
+router.post("/forget", ctrl.forget);
 
 /**
  * GET /api/auth/me

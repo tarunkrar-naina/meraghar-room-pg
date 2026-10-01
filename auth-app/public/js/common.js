@@ -277,7 +277,14 @@ function applyServerErrors(form, result) {
     }
   }
 
-  showBanner(form, result.message || "Kuch galat hai.", matched === 0 ? "error" : "error");
+  // The banner always carries the headline message, whether or not any field
+  // was matched, so the user always sees at least one clear explanation.
+  showBanner(form, result.message || "Kuch galat hai.", "error");
+
+  // A rate-limit or server failure names no field at all. In that case the
+  // banner is easy to miss, so repeat it as a toast too.
+  if (matched === 0) toast(result.message || "Kuch galat hai.", "error");
+
   return matched;
 }
 

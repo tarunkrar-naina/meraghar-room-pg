@@ -13,16 +13,27 @@ const PROTECTED_PATHS = [
   "/post-requirement",
 ];
 
-/** Admin-only route prefix. */
 const ADMIN_PREFIX = "/admin";
+/** The dedicated admin login must stay reachable while signed out. */
+const ADMIN_LOGIN = "/admin/login";
+
+/** Drops a trailing slash so "/admin/" and "/admin" compare equal. */
+function normalizePath(pathname: string): string {
+  if (pathname.length > 1 && pathname.endsWith("/")) return pathname.slice(0, -1);
+  return pathname;
+}
 
 export async function proxy(request: NextRequest) {
   const env = getPublicEnv();
 
-  const { pathname } = request.nextUrl;
+  const rawPath = request.nextUrl.pathname;
+  // `trailingSlash: true` means /admin/login/ is canonical, while the constants
+  // above are written without it. Normalise once so every comparison below is
+  // slash-insensitive (otherwise /admin/login/ -> /admin/login loops forever).
+  const pathname = normalizePath(rawPath);
 
   let supabaseResponse = NextResponse.next({ request });
-  supabaseResponse.headers.set("x-pathname", pathname);
+  supabaseResponse.headers.set("x-pathname", rawPath);
 
   if (!env.isSupabaseConfigured) {
     return supabaseResponse;
@@ -38,7 +49,7 @@ export async function proxy(request: NextRequest) {
           request.cookies.set(name, value)
         );
         supabaseResponse = NextResponse.next({ request });
-        supabaseResponse.headers.set("x-pathname", pathname);
+        supabaseResponse.headers.set("x-pathname", rawPath);
         cookiesToSet.forEach(({ name, value, options }) =>
           supabaseResponse.cookies.set(name, value, options)
         );
@@ -47,7 +58,7 @@ export async function proxy(request: NextRequest) {
   });
 
   // Refresh the auth session on every request - do NOT run on static assets.
-const {
+  const {
     data: { user },
   } = await supabase.auth.getUser();
 
@@ -55,17 +66,36 @@ const {
     (p) => pathname === p || pathname.startsWith(`${p}/`)
   );
 
-// Redirect logged-in users away from auth pages.
-  if (user && PUBLIC_PATHS.some((p) => pathname === p)) {
+  const isAdminArea =
+    pathname === ADMIN_PREFIX || pathname.startsWith(`${ADMIN_PREFIX}/`);
+
+  // Redirect logged-in users away from auth pages. Someone who is already signed
+  // in and opens /admin/login belongs in the panel - the layout then decides
+  // whether they are an admin or not.
+  if (user) {
     const url = request.nextUrl.clone();
-    url.pathname = "/";
+    if (pathname === ADMIN_LOGIN) {
+      url.pathname = ADMIN_PREFIX;
+      return NextResponse.redirect(url);
+    }
+    if (PUBLIC_PATHS.some((p) => pathname === p)) {
+      url.pathname = "/";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  // Require login for protected routes. Admin goes to its own login, which also
+  // handles the second factor - sending them to /login would skip it entirely.
+  if (!user && isProtected) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/login";
+    url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
 
-  // Require login for protected routes.
-  if (!user && (isProtected || pathname.startsWith(ADMIN_PREFIX))) {
+  if (!user && isAdminArea && pathname !== ADMIN_LOGIN) {
     const url = request.nextUrl.clone();
-    url.pathname = "/login";
+    url.pathname = ADMIN_LOGIN;
     url.searchParams.set("next", pathname);
     return NextResponse.redirect(url);
   }
@@ -75,6 +105,6 @@ const {
 
 export const config = {
   matcher: [
-"/((?!_next/static|[\\w-]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json|map|webmanifest)|favicon.ico).*)",
+    "/((?!_next/static|[\\w-]+\\.(?:svg|png|jpg|jpeg|gif|webp|ico|txt|xml|json|map|webmanifest)|favicon.ico).*)",
   ],
 };

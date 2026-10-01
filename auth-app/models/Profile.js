@@ -27,7 +27,7 @@
 
 "use strict";
 
-const { getDb, TABLES } = require("../config/db");
+const { requireDb, toDatabaseError, TABLES } = require("../config/db");
 
 /** Columns that the client is allowed to write. Anything else is ignored. */
 const EDITABLE_COLUMNS = ["name", "city", "state", "pincode", "address", "about", "photo"];
@@ -38,8 +38,7 @@ const EDITABLE_COLUMNS = ["name", "city", "state", "pincode", "address", "about"
  * which is what lets `ensureProfile` use it as a self-healing repair.
  */
 async function createProfile({ userId, name }) {
-  const db = getDb();
-  if (!db) return null;
+  const db = requireDb();
 
   const now = new Date().toISOString();
 
@@ -63,14 +62,13 @@ async function createProfile({ userId, name }) {
     .select("*")
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return data;
 }
 
 /** Returns the profile for a user, or null when it does not exist yet. */
 async function findByUserId(userId) {
-  const db = getDb();
-  if (!db) return null;
+  const db = requireDb();
 
   const { data, error } = await db
     .from(TABLES.profiles)
@@ -78,7 +76,7 @@ async function findByUserId(userId) {
     .eq("userId", userId)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return data;
 }
 
@@ -99,8 +97,7 @@ async function ensureProfile(user) {
  * @param {object} patch - only keys present in EDITABLE_COLUMNS are applied
  */
 async function updateProfile(userId, patch) {
-  const db = getDb();
-  if (!db) return null;
+  const db = requireDb();
 
   // Build the update strictly from the whitelist, and drop empty values so a
   // blank form field can never wipe a column that the client did not intend
@@ -119,7 +116,7 @@ async function updateProfile(userId, patch) {
     .select("*")
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return data;
 }
 

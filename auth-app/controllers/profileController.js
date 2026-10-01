@@ -14,7 +14,7 @@
 const fs = require("fs");
 const path = require("path");
 const Profile = require("../models/Profile");
-const User = require("../models/User");
+const { getDb, TABLES } = require("../config/db");
 const { deleteUploadedPhoto, UPLOAD_DIR } = require("../config/upload");
 
 /** Strips null/empty strings so the SQL update only touches real changes. */
@@ -85,9 +85,11 @@ async function updateProfile(req, res, next) {
     // same display name. A failure here must not lose the profile update.
     if (patch.name && patch.name !== req.user.name) {
       try {
-        const db = require("../config/db").getDb();
+        const db = getDb();
         if (db) {
-          await db.from("auth_users").update({ name: patch.name }).eq("id", req.user.id);
+          // TABLES.users, not a literal string - renaming the table in one
+          // place has to be enough.
+          await db.from(TABLES.users).update({ name: patch.name }).eq("id", req.user.id);
         }
       } catch {
         /* non-fatal */

@@ -24,6 +24,7 @@ import { APP_SUBTITLE, APP_TAGLINE, APP_TAGLINE_HINDI, DEFAULT_CITIES } from "@/
 import { JsonLd } from "@/components/JsonLd";
 import { generateSchemaMarkup, generateMetadata as generateSeoMetadata } from "@/lib/seo";
 import { SEO_CITIES } from "@/lib/seo-config";
+import { getSetting } from "@/lib/site-settings";
 
 export const dynamic = "force-dynamic";
 
@@ -47,6 +48,11 @@ export default async function HomePage() {
     fetchRequirements(),
   ]);
 
+  const [heroTitle, heroSubtitle] = await Promise.all([
+    getSetting("hero_title", APP_TAGLINE),
+    getSetting("hero_subtitle", APP_SUBTITLE),
+  ]);
+
   const popularLocalities = localities.slice(0, 8);
 
   return (
@@ -67,11 +73,11 @@ export default async function HomePage() {
                 Kaithal · Kurukshetra · Pundri · Narwana
             </span>
             <h1 className="mt-5 text-3xl font-extrabold leading-tight tracking-tight text-white sm:text-5xl">
-              {APP_TAGLINE}
+              {heroTitle}
             </h1>
             <p className="mt-2 text-sm font-medium text-teal-200 sm:text-base">{APP_TAGLINE_HINDI}</p>
-            <p className="mx-auto mt-4 max-w-xl text-base text-slate-300 sm:text-lg">
-              {APP_SUBTITLE}
+            <p className="mx-auto mt-4 max-w-xl whitespace-pre-line text-base text-slate-300 sm:text-lg">
+              {heroSubtitle}
             </p>
           </div>
           <div className="mt-10">

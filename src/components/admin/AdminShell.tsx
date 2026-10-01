@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import {
+  Database,
   ExternalLink,
   Home,
   LayoutDashboard,
@@ -12,6 +13,8 @@ import {
   Menu,
   MessageSquareWarning,
   PhoneCall,
+  Rocket,
+  Settings2,
   ShieldCheck,
   Tag,
   Users,
@@ -28,11 +31,26 @@ const NAV = [
   { href: "/admin/requirements", label: "Requirements", icon: ListOrdered, badgeCount: "openRequirements" as const },
   { href: "/admin/users", label: "Users", icon: Users },
   { href: "/admin/reports", label: "Reports", icon: MessageSquareWarning },
-  { href: "/admin/localities", label: "Localities", icon: MapPinned },
-  { href: "/admin/locations", label: "SEO Locations", icon: Tag, isNew: true },
 ];
 
-export function AdminShell({ children, openRequirements }: { children: React.ReactNode; openRequirements: number }) {
+const CONTENT_NAV = [
+  { href: "/admin/localities", label: "Localities", icon: MapPinned },
+  { href: "/admin/locations", label: "SEO Locations", icon: Tag },
+  { href: "/admin/content", label: "Site Content", icon: Settings2, isNew: true },
+];
+
+const TOOLS_NAV = [
+  { href: "/admin/database", label: "Database", icon: Database, isNew: true },
+  { href: "/admin/deploy", label: "Deploy Website", icon: Rocket, isNew: true },
+];
+
+export function AdminShell({
+  children,
+  openRequirements,
+}: {
+  children: React.ReactNode;
+  openRequirements: number;
+}) {
   const pathname = usePathname();
   const router = useRouter();
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,50 +64,72 @@ export function AdminShell({ children, openRequirements }: { children: React.Rea
   async function handleSignOut() {
     setSigningOut(true);
     await signOut();
-    router.push("/");
+    router.push("/admin/login");
     router.refresh();
   }
 
-  const navBody = (
-    <nav className="flex flex-col gap-1">
-      {NAV.map((item) => {
-        const badge = item.badgeCount === "openRequirements" ? openRequirements : null;
-        return (
-          <Link
-            key={item.href}
-            href={item.href}
-            onClick={() => setSidebarOpen(false)}
+  function renderItem(
+    item: (typeof NAV)[number] | (typeof CONTENT_NAV)[number] | (typeof TOOLS_NAV)[number]
+  ) {
+    const badge = "badgeCount" in item && item.badgeCount === "openRequirements" ? openRequirements : null;
+    const isNew = "isNew" in item && item.isNew;
+    const active = isActive(item.href, "exact" in item ? item.exact : undefined);
+
+    return (
+      <Link
+        key={item.href}
+        href={item.href}
+        onClick={() => setSidebarOpen(false)}
+        className={cn(
+          "group inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
+          active ? "bg-teal-600 text-white" : "text-slate-300 hover:bg-slate-800 hover:text-white"
+        )}
+      >
+        <item.icon className="h-4 w-4 shrink-0" />
+        <span className="truncate">{item.label}</span>
+        {isNew && (
+          <span
             className={cn(
-              "group inline-flex items-center gap-2.5 rounded-lg px-3 py-2 text-sm font-medium transition-colors",
-              isActive(item.href, item.exact)
-                ? "bg-teal-600 text-white"
-                : "text-slate-300 hover:bg-slate-800 hover:text-white"
+              "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
+              active ? "bg-white/20 text-white" : "bg-teal-500/20 text-teal-300"
             )}
           >
-            <item.icon className="h-4 w-4 shrink-0" />
-            <span className="truncate">{item.label}</span>
-            {item.isNew && (
-              <span className={cn(
-                "ml-auto rounded-full px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wide",
-                isActive(item.href, item.exact) ? "bg-white/20 text-white" : "bg-teal-500/20 text-teal-300"
-              )}>
-                New
-              </span>
+            New
+          </span>
+        )}
+        {badge !== null && badge > 0 && (
+          <span
+            className={cn(
+              "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold",
+              active ? "bg-white/25 text-white" : "bg-indigo-500 text-white"
             )}
-            {badge !== null && badge > 0 && (
-              <span
-                className={cn(
-                  "ml-auto inline-flex h-5 min-w-5 items-center justify-center rounded-full px-1.5 text-[11px] font-bold",
-                  isActive(item.href, item.exact) ? "bg-white/25 text-white" : "bg-indigo-500 text-white"
-                )}
-              >
-                {badge}
-              </span>
-            )}
-          </Link>
-        );
-      })}
-    </nav>
+          >
+            {badge}
+          </span>
+        )}
+      </Link>
+    );
+  }
+
+  const navBody = (
+    <>
+      <nav className="flex flex-col gap-1">{NAV.map(renderItem)}</nav>
+
+      <p className="mb-1.5 mt-6 px-3 text-[11px] uppercase tracking-wider text-slate-500">
+        Website content
+      </p>
+      <nav className="flex flex-col gap-1">{CONTENT_NAV.map(renderItem)}</nav>
+
+      <p className="mb-1.5 mt-6 px-3 text-[11px] uppercase tracking-wider text-slate-500">
+        Tools
+      </p>
+      <nav className="flex flex-col gap-1">{TOOLS_NAV.map(renderItem)}</nav>
+
+      <p className="mt-6 px-3 text-[11px] leading-relaxed text-slate-600">
+        <span className="font-mono text-teal-600">Database</span> se koi bhi table
+        dekh aur edit kar sakte hain.
+      </p>
+    </>
   );
 
   const topbar = (
@@ -137,23 +177,15 @@ export function AdminShell({ children, openRequirements }: { children: React.Rea
     <div className="min-h-screen bg-slate-950">
       {topbar}
 
-      <div className="mx-auto flex w-full max-w-[1400px]">
-        {/* Desktop sidebar */}
+      <div className="mx-auto flex w-full max-w-[1500px]">
         <aside className="sticky top-14 hidden h-[calc(100vh-3.5rem)] w-60 shrink-0 overflow-y-auto border-r border-slate-800 p-3 lg:block">
           {navBody}
-          <p className="mt-6 px-3 text-[11px] uppercase tracking-wider text-slate-500">
-            Location SEO
-          </p>
-          <p className="mt-1 px-3 text-xs leading-relaxed text-slate-600">
-            Counties/towns listed under <span className="font-mono text-teal-600">SEO Locations</span> get their own pages automatically.
-          </p>
         </aside>
 
-        {/* Mobile drawer */}
         {sidebarOpen && (
           <div className="fixed inset-0 z-40 lg:hidden">
             <div className="absolute inset-0 bg-slate-950/70" onClick={() => setSidebarOpen(false)} />
-            <aside className="absolute left-0 top-0 bottom-0 w-64 overflow-y-auto bg-slate-900 p-3 pt-4">
+            <aside className="absolute bottom-0 left-0 top-0 w-64 overflow-y-auto bg-slate-900 p-3 pt-4">
               {navBody}
             </aside>
           </div>

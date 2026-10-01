@@ -10,9 +10,10 @@ node_modules/
 public/uploads/*
 !public/uploads/.gitkeep
 
-# Logs
+# Logs and local run artifacts (these are regenerated on every boot)
 *.log
 npm-debug.log*
+.server.pid
 
 # OS noise
 .DS_Store

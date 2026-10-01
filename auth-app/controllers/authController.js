@@ -14,7 +14,13 @@
 const bcrypt = require("bcryptjs");
 const User = require("../models/User");
 const Profile = require("../models/Profile");
-const { issueSession, clearSession, REMEMBER_COOKIE } = require("../middleware/auth");
+const {
+  issueSession,
+  clearSession,
+  forgetRememberedUser,
+  REMEMBER_COOKIE,
+} = require("../middleware/auth");
+const { DatabaseError } = require("../config/db");
 
 /** Work factor for bcrypt. 12 is a good balance on modern hardware. */
 const BCRYPT_ROUNDS = 12;
@@ -166,6 +172,19 @@ async function logout(req, res) {
 }
 
 /**
+ * POST /api/auth/forget
+ *
+ * Backs the "Use a different account" link on the Welcome back screen. It
+ * clears ONLY the remembered identifier cookie, so the user stops being
+ * greeted on every visit but is NOT logged out - if they happened to arrive
+ * with a valid session, that session is left completely untouched.
+ */
+async function forget(req, res) {
+  forgetRememberedUser(res);
+  res.json({ ok: true, message: "Yeh account yaad nahi rahega." });
+}
+
+/**
  * GET /api/auth/me
  * The frontend calls this on every page load. If a valid session exists the
  * navbar renders the name + photo, otherwise it renders Login / Signup.
@@ -233,10 +252,15 @@ async function remembered(req, res) {
       name: profile?.name || user.name,
       photo: profile?.photo ?? null,
     });
-  } catch {
-    // A failure here must not break the page - just show the login form.
+  } catch (err) {
+    // A missing table / key is a setup problem, not a "nothing remembered"
+    // answer, so it must reach the user instead of silently showing the login
+    // form and hiding the real reason.
+    if (err instanceof DatabaseError) throw err;
+
+    // Any other failure must not break the page - just show the login form.
     res.json({ ok: true, remembered: false });
   }
 }
 
-module.exports = { signup, login, logout, me, remembered };
+module.exports = { signup, login, logout, forget, me, remembered };

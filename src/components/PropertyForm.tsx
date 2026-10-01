@@ -15,10 +15,11 @@ import {
 import { cn } from "@/lib/utils";
 import { validateImageFile, validatePropertyForm, type FieldErrors } from "@/lib/validation";
 import { createProperty, updateProperty } from "@/lib/actions/property";
+import { adminCreateProperty, adminUpdateProperty } from "@/lib/actions/admin";
 import { useToast } from "@/components/Toast";
 import { Button, Field, Input, Select, Textarea } from "@/components/ui";
 import { MapPicker } from "@/components/map/MapPicker";
-import type { PropertyFormValues } from "@/types";
+import type { PropertyFormValues, PropertyStatus } from "@/types";
 
 interface PropertyFormProps {
   userId: string;
@@ -27,7 +28,25 @@ interface PropertyFormProps {
   propertyId?: string;
   initialValues?: Partial<PropertyFormValues>;
   initialImages?: string[];
+  /**
+   * Admin mode. Saves through the admin server actions (service role), shows the
+   * listing-status dropdown, and redirects back to the admin table instead of
+   * the owner's dashboard.
+   */
+  adminMode?: boolean;
+  /** Initial listing status when `adminMode` is set. */
+  initialStatus?: PropertyStatus;
+  /** Where to go after a successful save. */
+  successHref?: string;
 }
+
+const STATUS_OPTIONS: { value: PropertyStatus; label: string }[] = [
+  { value: "approved", label: "Approved - site par live" },
+  { value: "pending", label: "Pending - review baad me live" },
+  { value: "rejected", label: "Rejected - site par nahi dikhegi" },
+  { value: "rented", label: "Rented / occupied" },
+  { value: "sold", label: "Sold" },
+];
 
 const emptyValues: PropertyFormValues = {
   title: "",
@@ -58,6 +77,9 @@ export function PropertyForm({
   propertyId,
   initialValues,
   initialImages = [],
+  adminMode = false,
+  initialStatus = "approved",
+  successHref,
 }: PropertyFormProps) {
   const router = useRouter();
   const { toast } = useToast();
@@ -66,6 +88,7 @@ export function PropertyForm({
     ...initialValues,
     amenities: initialValues?.amenities ?? [],
   });
+  const [status, setStatus] = useState<PropertyStatus>(initialStatus);
   const [images, setImages] = useState<string[]>(initialImages);
   const [uploading, setUploading] = useState(false);
   const [errors, setErrors] = useState<FieldErrors>({});
@@ -166,25 +189,34 @@ export function PropertyForm({
     if (!validate() || uploading) return;
 
     startTransition(async () => {
-      const result = propertyId
-        ? await updateProperty(propertyId, values, images)
-        : await createProperty(values, images);
+      const result: { ok: boolean; error?: string; propertyId?: string } = adminMode
+        ? propertyId
+          ? await adminUpdateProperty(propertyId, { ...values, status }, images)
+          : await adminCreateProperty({ ...values, status }, images)
+        : propertyId
+          ? await updateProperty(propertyId, values, images)
+          : await createProperty(values, images);
 
-      if (result.ok) {
-        toast(
-          propertyId
-            ? "Property updated successfully. Changes are now live."
-            : "Property saved! Ab yeh peeche home page par live hai.",
-          "success"
-        );
-        if (result.propertyId) {
-          router.push("/admin/properties");
-          router.refresh();
-        } else {
-          router.refresh();
-        }
-      } else {
+      if (!result.ok) {
         toast(result.error ?? "Something went wrong.", "error");
+        return;
+      }
+
+      toast(
+        propertyId
+          ? "Property update ho gayi - changes live hain."
+          : "Property save ho gayi.",
+        "success"
+      );
+
+      if (successHref) {
+        router.push(successHref);
+        router.refresh();
+      } else if (result.propertyId) {
+        router.push("/admin/properties");
+        router.refresh();
+      } else {
+        router.refresh();
       }
     });
   }
@@ -477,9 +509,44 @@ export function PropertyForm({
         />
       </section>
 
+      {/* ---------- Admin: listing status ---------- */}
+      {adminMode && (
+        <section className={sectionCls}>
+          <h2 className={sectionTitleCls}>Listing status</h2>
+          <p className="mb-4 text-sm text-slate-500">
+            Sirf <span className="font-semibold text-emerald-700">Approved</span> wali
+            property public site par dikhti hai. Baaki statuses review ya archive ke liye hain.
+          </p>
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+            {STATUS_OPTIONS.map((option) => (
+              <label
+                key={option.value}
+                className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-sm transition-colors ${
+                  status === option.value
+                    ? "border-teal-500 bg-teal-50 text-teal-900"
+                    : "border-slate-200 text-slate-600 hover:bg-slate-50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="status"
+                  value={option.value}
+                  checked={status === option.value}
+                  onChange={() => setStatus(option.value)}
+                  className="h-4 w-4 accent-teal-600"
+                />
+                {option.label}
+              </label>
+            ))}
+          </div>
+        </section>
+      )}
+
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-end">
         <p className="text-xs text-slate-400">
-          Save karte hi aapki property home page par cards ki form me dikhne lagegi.
+          {adminMode
+            ? "Save karte hi property turant live ho jati hai (approved status par)."
+            : "Save karte hi aapki property home page par cards ki form me dikhne lagegi."}
         </p>
         <Button type="submit" size="lg" loading={pending} className="sm:w-auto">
           {propertyId ? "Save changes" : "Save Property"}

@@ -19,6 +19,7 @@ const ctrl = require("../controllers/profileController");
 const { validate } = require("../middleware/validate");
 const { requireAuth } = require("../middleware/auth");
 const { upload } = require("../config/upload");
+const { limiterDisabled, limiterMax } = require("../config/rateLimit");
 
 const router = express.Router();
 
@@ -28,9 +29,10 @@ router.use(requireAuth);
 /** Uploads are rate limited too, otherwise a user can fill the disk. */
 const uploadLimiter = rateLimit({
   windowMs: 15 * 60 * 1000,
-  max: 20,
+  max: limiterMax(20),
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => limiterDisabled(),
   message: {
     ok: false,
     code: "RATE_LIMITED",

@@ -3,6 +3,7 @@ import { BadgeCheck, HeartHandshake, MapPin, ShieldCheck } from "lucide-react";
 import { Container } from "@/components/ui";
 import { JsonLd } from "@/components/JsonLd";
 import { generateMetadata as buildSeoMetadata, generateSchemaMarkup } from "@/lib/seo";
+import { getSetting } from "@/lib/site-settings";
 
 export const metadata: Metadata = buildSeoMetadata("static", {
   title: "About MeraGhar | Local Property Marketplace Haryana",
@@ -11,19 +12,26 @@ export const metadata: Metadata = buildSeoMetadata("static", {
   keywords: ["about MeraGhar", "Haryana property marketplace", "local property platform"],
 });
 
-export default function AboutPage() {
+export default async function AboutPage() {
+  const [intro, body] = await Promise.all([
+    getSetting(
+      "about_intro",
+      "MeraGhar makes it simpler to find a room, PG, flat, house or shop in your own city. Local owners can share property details, while tenants and buyers can search with clear photos, prices and location information."
+    ),
+    getSetting(
+      "about_body",
+      "We currently focus on Kaithal, Kurukshetra, Pundri and Narwana in Haryana, with more cities planned. Our goal is simple: make local property discovery transparent, useful and safe."
+    ),
+  ]);
+
   return (
     <>
       <Container className="py-10 sm:py-16">
         <div className="mx-auto max-w-3xl">
           <p className="text-sm font-semibold uppercase tracking-wider text-teal-700">About MeraGhar</p>
           <h1 className="mt-3 text-3xl font-extrabold tracking-tight text-slate-900 sm:text-5xl">Apna Sapna Ghar, Local Property Marketplace</h1>
-          <p className="mt-5 text-lg leading-8 text-slate-600">
-            MeraGhar makes it simpler to find a room, PG, flat, house or shop in your own city. Local owners can share property details, while tenants and buyers can search with clear photos, prices and location information.
-          </p>
-          <p className="mt-4 leading-7 text-slate-600">
-            We currently focus on Kaithal, Kurukshetra, Pundri and Narwana in Haryana, with more cities planned. Our goal is simple: make local property discovery transparent, useful and safe.
-          </p>
+          <p className="mt-5 whitespace-pre-line text-lg leading-8 text-slate-600">{intro}</p>
+          <p className="mt-4 whitespace-pre-line leading-7 text-slate-600">{body}</p>
         </div>
 
         <div className="mt-12 grid gap-5 md:grid-cols-3">

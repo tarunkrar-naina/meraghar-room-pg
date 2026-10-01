@@ -12,13 +12,14 @@
  *   createdAt    tstz  - signup time
  *   lastLogin    tstz  - most recent successful login
  *
- * Every function here returns a plain object or null and NEVER throws for a
- * "not found" case, so callers stay simple.
+ * Every function here returns a plain object or null and throws a readable
+ * DatabaseError for anything that is not a simple "not found" case, so callers
+ * stay simple and the user gets an actionable message.
  */
 
 "use strict";
 
-const { getDb, TABLES } = require("../config/db");
+const { requireDb, toDatabaseError, TABLES } = require("../config/db");
 
 /** The exact columns safe to send to the browser (passwordHash excluded). */
 const PUBLIC_COLUMNS = "id, name, mobile, email, createdAt, lastLogin";
@@ -29,8 +30,7 @@ const PUBLIC_COLUMNS = "id, name, mobile, email, createdAt, lastLogin";
  * @returns {Promise<{ok:true,user:object} | {ok:false,code:string,message:string}>}
  */
 async function createUser({ name, mobile, email, passwordHash }) {
-  const db = getDb();
-  if (!db) return { ok: false, code: "DB_MISSING", message: "Database not configured." };
+  const db = requireDb();
 
   const { data, error } = await db
     .from(TABLES.users)
@@ -51,7 +51,8 @@ async function createUser({ name, mobile, email, passwordHash }) {
     if (error.code === "23505") {
       return { ok: false, code: "DUPLICATE", message: "Mobile number or email already registered." };
     }
-    return { ok: false, code: "DB_ERROR", message: error.message };
+    // Anything else is a real database problem and should surface as such.
+    throw toDatabaseError(error);
   }
 
   return { ok: true, user: data };
@@ -59,8 +60,7 @@ async function createUser({ name, mobile, email, passwordHash }) {
 
 /** Finds one account by email. Returns null when not found. */
 async function findByEmail(email) {
-  const db = getDb();
-  if (!db) return null;
+  const db = requireDb();
 
   const { data, error } = await db
     .from(TABLES.users)
@@ -68,14 +68,13 @@ async function findByEmail(email) {
     .eq("email", email)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return data;
 }
 
 /** Finds one account by mobile number. Returns null when not found. */
 async function findByMobile(mobile) {
-  const db = getDb();
-  if (!db) return null;
+  const db = requireDb();
 
   const { data, error } = await db
     .from(TABLES.users)
@@ -83,7 +82,7 @@ async function findByMobile(mobile) {
     .eq("mobile", mobile)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return data;
 }
 
@@ -100,8 +99,7 @@ async function findByIdentifier(identifier) {
 
 /** Finds one account by id. Returns null when not found. */
 async function findById(id) {
-  const db = getDb();
-  if (!db) return null;
+  const db = requireDb();
 
   const { data, error } = await db
     .from(TABLES.users)
@@ -109,47 +107,52 @@ async function findById(id) {
     .eq("id", id)
     .maybeSingle();
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return data;
 }
 
 /** Cheap existence check used to give friendly "already registered" messages. */
 async function isEmailTaken(email) {
-  const db = getDb();
-  if (!db) return false;
+  const db = requireDb();
 
   const { count, error } = await db
     .from(TABLES.users)
     .select("id", { count: "exact", head: true })
     .eq("email", email);
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return (count ?? 0) > 0;
 }
 
 /** Same as isEmailTaken but for mobile numbers. */
 async function isMobileTaken(mobile) {
-  const db = getDb();
-  if (!db) return false;
+  const db = requireDb();
 
   const { count, error } = await db
     .from(TABLES.users)
     .select("id", { count: "exact", head: true })
     .eq("mobile", mobile);
 
-  if (error) throw new Error(error.message);
+  if (error) throw toDatabaseError(error);
   return (count ?? 0) > 0;
 }
 
-/** Records a successful login time. Failures here must never block login. */
+/**
+ * Records a successful login time.
+ *
+ * Deliberately swallows its own errors: the user is already authenticated at
+ * this point, so a failure to write a timestamp must never deny them a login.
+ */
 async function updateLastLogin(id) {
-  const db = getDb();
-  if (!db) return;
-
-  await db
-    .from(TABLES.users)
-    .update({ lastLogin: new Date().toISOString() })
-    .eq("id", id);
+  try {
+    const db = requireDb();
+    await db
+      .from(TABLES.users)
+      .update({ lastLogin: new Date().toISOString() })
+      .eq("id", id);
+  } catch (err) {
+    console.warn("[warn] could not update lastLogin:", err.message);
+  }
 }
 
 module.exports = {

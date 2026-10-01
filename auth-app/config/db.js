@@ -56,6 +56,71 @@ function isDbConfigured() {
 }
 
 /**
+ * An error we can explain to the user, instead of a raw PostgREST code.
+ * server.js turns these into a proper HTTP response.
+ */
+class DatabaseError extends Error {
+  constructor(code, message) {
+    super(message);
+    this.name = "DatabaseError";
+    this.code = code;
+  }
+}
+
+/**
+ * Translates a Supabase/PostgREST error into something a human can act on.
+ *
+ * Without this, a signup against a project whose tables were never created
+ * returns a bare "Kuch galat ho gaya", which sends people hunting through
+ * their own code for a bug that is really a missing setup step.
+ *
+ * @param {{code?:string, message:string, hint?:string|null}|null} error
+ * @returns {DatabaseError}
+ */
+function toDatabaseError(error) {
+  const message = error?.message || "Unknown database error.";
+
+  // PGRST205 = "Could not find the table ... in the schema cache", i.e. the
+  // schema.sql has not been run in the SQL Editor yet.
+  if (error?.code === "PGRST205" || /schema cache/i.test(message)) {
+    return new DatabaseError(
+      "SCHEMA_MISSING",
+      "Database tables abhi bane nahi hain. Supabase SQL Editor me supabase/schema.sql paste karke Run karein, phir server restart karein."
+    );
+  }
+
+  // 42P01 is the Postgres-level "relation does not exist".
+  if (error?.code === "42P01") {
+    return new DatabaseError("SCHEMA_MISSING", "Database table nahi mili. supabase/schema.sql run karein.");
+  }
+
+  // 42501 = permission denied, e.g. a wrong or publishable key in .env.
+  if (error?.code === "42501" || /row-level security|permission denied/i.test(message)) {
+    return new DatabaseError(
+      "DB_PERMISSION",
+      "Database access nahi mila. .env me sahi SUPABASE_SERVICE_ROLE_KEY daali hai ya nahi check karein."
+    );
+  }
+
+  return new DatabaseError("DB_ERROR", message);
+}
+
+/**
+ * Guard used before any query. Lets the server answer with a clear setup
+ * message instead of crashing with "Cannot read properties of null".
+ */
+function requireDb() {
+  const db = getDb();
+  if (!db) {
+    throw new DatabaseError(
+      "DB_MISSING",
+      "Database configured nahi hai. .env.example ko .env me copy karke SUPABASE_URL aur SUPABASE_SERVICE_ROLE_KEY daalein."
+    );
+  }
+  return db;
+}
+
+/**
  * Verifies that both tables exist and are visible to PostgREST.
  *
  * Supabase's REST API can read and write data but CANNOT run DDL, so the
@@ -79,10 +144,12 @@ async function checkSchema() {
 
   const missing = [];
 
-  // A `head: true` select with count does not download any rows, it just
-  // confirms the table is reachable.
+  // IMPORTANT: this must be a real row select, NOT `head: true`.
+  // With `head: true` PostgREST swallows the "table not found" error and just
+  // returns `count: null`, which would make this check report OK for a table
+  // that does not exist. A `limit(1)` select surfaces PGRST205 properly.
   for (const table of Object.values(TABLES)) {
-    const { error } = await db.from(table).select("*", { count: "exact", head: true });
+    const { error } = await db.from(table).select("*").limit(1);
     // PGRST205 = "table not found in the schema cache"
     if (error) missing.push(table);
   }
@@ -100,4 +167,12 @@ async function checkSchema() {
   return { ok: true, missing: [], message: "Database schema is ready." };
 }
 
-module.exports = { getDb, isDbConfigured, checkSchema, TABLES };
+module.exports = {
+  getDb,
+  isDbConfigured,
+  checkSchema,
+  toDatabaseError,
+  requireDb,
+  DatabaseError,
+  TABLES,
+};

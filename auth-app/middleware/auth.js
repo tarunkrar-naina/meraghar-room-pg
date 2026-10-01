@@ -44,8 +44,14 @@ function getJwtSecret() {
   return secret;
 }
 
-/** Signs the JWT that goes into the cookie. */
-function signToken(user) {
+/**
+ * Signs the JWT that goes into the cookie.
+ *
+ * The expiry is passed in rather than read from the environment, because
+ * "Remember me" has to override the default lifetime. `JWT_EXPIRES_IN` is only
+ * a fallback for callers that do not care (e.g. a one-off email link).
+ */
+function signToken(user, expiresIn = process.env.JWT_EXPIRES_IN || SESSION_TTL) {
   return jwt.sign(
     {
       sub: user.id,
@@ -54,7 +60,7 @@ function signToken(user) {
       email: user.email,
     },
     getJwtSecret(),
-    { expiresIn: process.env.JWT_EXPIRES_IN || SESSION_TTL }
+    { expiresIn }
   );
 }
 
@@ -83,11 +89,7 @@ function issueSession(res, user, rememberMe) {
 
   // The JWT itself has to carry the same lifetime as the cookie, otherwise a
   // "remember me" login would still expire after 1 day.
-  const token = jwt.sign(
-    { sub: user.id, name: user.name, mobile: user.mobile, email: user.email },
-    getJwtSecret(),
-    { expiresIn: ttl }
-  );
+  const token = signToken(user, ttl);
 
   res.cookie(TOKEN_COOKIE, token, tokenCookieOptions(maxAge));
 
@@ -107,6 +109,15 @@ function issueSession(res, user, rememberMe) {
 /** Clears both cookies on logout. */
 function clearSession(res) {
   res.clearCookie(TOKEN_COOKIE, { path: "/" });
+  res.clearCookie(REMEMBER_COOKIE, { path: "/" });
+}
+
+/**
+ * Clears ONLY the remembered-identifier cookie, leaving the user logged in.
+ * Backs the "Use a different account" link, which must stop the "Welcome back"
+ * screen from reappearing without throwing the user out of their session.
+ */
+function forgetRememberedUser(res) {
   res.clearCookie(REMEMBER_COOKIE, { path: "/" });
 }
 
@@ -168,6 +179,10 @@ async function requireAuth(req, res, next) {
  * Attaches `req.user` when a valid session exists, but never blocks.
  * Used by /api/auth/me and the navbar so a logged-out visitor simply gets
  * `user: null` instead of a redirect.
+ *
+ * This one never throws: it runs on every single page load just to draw the
+ * navbar, so a database hiccup must degrade to "logged out" rather than take
+ * the page down. Protected routes use `requireAuth` and DO report the error.
  */
 async function optionalAuth(req, res, next) {
   try {
@@ -175,7 +190,8 @@ async function optionalAuth(req, res, next) {
     if (payload) req.user = await User.findById(payload.sub);
     next();
   } catch (err) {
-    next(err);
+    console.warn("[warn] session lookup failed:", err.message);
+    next();
   }
 }
 
@@ -185,6 +201,7 @@ module.exports = {
   signToken,
   issueSession,
   clearSession,
+  forgetRememberedUser,
   readToken,
   verifyToken,
   requireAuth,

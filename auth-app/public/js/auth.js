@@ -31,6 +31,38 @@ function validEmail(v) { return RULES.email.test(v.trim()); }
 function validPassword(v) { return v.length >= 8 && v.length <= 72 && /[A-Za-z]/.test(v) && /\d/.test(v); }
 
 /* ------------------------------------------------------------------ */
+/* Home page - returning user redirect                                 */
+/* ------------------------------------------------------------------ */
+/**
+ * The JustDial / OLX behaviour: when somebody comes back to the site we take
+ * them straight to the right place instead of making them click "Login".
+ *
+ *   session still valid -> /profile   (auto-login, nothing asked)
+ *   identifier remembered -> /welcome (the "Continue as [Name]" screen)
+ *   neither -> stay on the home page
+ *
+ * The remembered cookie is httpOnly, so the only way to check it is to ask
+ * the server via /api/auth/remembered.
+ */
+function initHome() {
+  const hero = document.querySelector(".hero");
+  if (!hero) return;
+
+  (async () => {
+    const user = await getSession();
+    if (user) {
+      window.location.replace("/profile");
+      return;
+    }
+
+    const res = await api("/api/auth/remembered");
+    if (res.ok && res.remembered) {
+      window.location.replace("/welcome");
+    }
+  })();
+}
+
+/* ------------------------------------------------------------------ */
 /* Signup page                                                         */
 /* ------------------------------------------------------------------ */
 function initSignup() {
@@ -128,6 +160,16 @@ function initLogin() {
   const identifier = document.getElementById("identifier");
   const password = document.getElementById("password");
   const remember = document.getElementById("rememberMe");
+
+  // "Use a different account" sends us here with ?forget=1. Clear the
+  // remembered identifier server-side (the cookie is httpOnly, so JavaScript
+  // cannot delete it itself) and skip the welcome screen from now on.
+  if (params.get("forget") === "1") {
+    api("/api/auth/forget", { method: "POST" }).then(() => {
+      window.history.replaceState({}, "", "/login");
+      toast("Ab aap koi bhi account use kar sakte hain.", "info");
+    });
+  }
 
   // "If the JWT is still valid, auto-login directly without asking anything."
   getSession().then((user) => {
@@ -270,12 +312,20 @@ function initWelcome() {
 
     box.appendChild(cont);
 
-    // "Use a different account" - forgets the cookie so this screen does not
-    // reappear on the next visit.
+    // "Use a different account" - clears the remembered cookie (server-side,
+    // since it is httpOnly) so this screen does not reappear on the next visit.
     const diff = document.createElement("a");
     diff.className = "btn btn-outline btn-block";
     diff.href = "/login?forget=1";
     diff.textContent = "Use a different account";
+    diff.addEventListener("click", (e) => {
+      // Fire-and-forget: the cookie has to be gone before the next page load
+      // asks /api/auth/remembered, so we await it and then navigate.
+      e.preventDefault();
+      api("/api/auth/forget", { method: "POST" }).finally(() => {
+        window.location.href = "/login";
+      });
+    });
     box.appendChild(diff);
 
     const signup = document.createElement("p");
@@ -299,8 +349,9 @@ async function doLogout() {
 }
 
 // Boot whichever page we are on. Each init function is a no-op when its
-// elements are not present, so one file can safely serve all three pages.
+// elements are not present, so one file can safely serve all the pages.
 document.addEventListener("DOMContentLoaded", () => {
+  initHome();
   initSignup();
   initLogin();
   initWelcome();

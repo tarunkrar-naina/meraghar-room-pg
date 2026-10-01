@@ -1,4 +1,22 @@
-﻿-- ============================================================
+﻿-- ------------------------------------------------------------------
+-- 0. Safety net: is_admin() is referenced by every admin policy below.
+--    It already exists from 20260911000000_init.sql, but re-creating it
+--    (CREATE OR REPLACE is idempotent) means the policies below can never
+--    fail with `function public.is_admin() does not exist`.
+-- ------------------------------------------------------------------
+create or replace function public.is_admin()
+returns boolean
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1 from public.profiles where id = auth.uid() and role = 'admin'
+  );
+$$;
+
+-- ============================================================
 -- MeraGhar - MISSING DATABASE MIGRATIONS (apply all at once)
 -- Run this WHOLE file in:  Supabase Dashboard > SQL Editor > New query > Run
 -- This is idempotent (safe to re-run).
@@ -88,21 +106,10 @@ create index if not exists idx_property_views_prop_time
 create index if not exists idx_property_views_time
   on public.property_views (viewed_at desc);
 
--- A contact reveal = a customer paid to unlock an owner's contact details.
-create table if not exists public.contact_reveals (
-  id          uuid primary key default gen_random_uuid(),
-  property_id uuid not null references public.properties(id) on delete cascade,
-  customer_id uuid not null references public.profiles(id) on delete cascade,
-  amount_paid numeric(12,2) not null default 0,
-  payment_id  uuid references public.payments(id) on delete set null,
-  revealed_at timestamptz not null default now(),
-  constraint contact_reveals_property_customer_key unique (property_id, customer_id)
-);
-
-create index if not exists idx_contact_reveals_property on public.contact_reveals (property_id);
-create index if not exists idx_contact_reveals_customer on public.contact_reveals (customer_id);
-
 -- All payments: contact reveals + featured listing purchases.
+-- NOTE: must come BEFORE contact_reveals, because that table has a FK to
+-- payments(id). Creating them in the other order fails with
+-- `relation "public.payments" does not exist` and aborts the whole batch.
 create table if not exists public.payments (
   id                  uuid primary key default gen_random_uuid(),
   user_id             uuid not null references public.profiles(id) on delete cascade,
@@ -119,6 +126,21 @@ create table if not exists public.payments (
 create index if not exists idx_payments_user   on public.payments (user_id);
 create index if not exists idx_payments_status on public.payments (status, created_at desc);
 create index if not exists idx_payments_order  on public.payments (razorpay_order_id) where razorpay_order_id is not null;
+
+-- A contact reveal = a customer paid to unlock an owner's contact details.
+create table if not exists public.contact_reveals (
+  id          uuid primary key default gen_random_uuid(),
+  property_id uuid not null references public.properties(id) on delete cascade,
+  customer_id uuid not null references public.profiles(id) on delete cascade,
+  amount_paid numeric(12,2) not null default 0,
+  payment_id  uuid references public.payments(id) on delete set null,
+  revealed_at timestamptz not null default now(),
+  constraint contact_reveals_property_customer_key unique (property_id, customer_id)
+);
+
+create index if not exists idx_contact_reveals_property on public.contact_reveals (property_id);
+create index if not exists idx_contact_reveals_customer on public.contact_reveals (customer_id);
+
 
 -- ------------------------------------------------------------------
 -- 3. Row Level Security

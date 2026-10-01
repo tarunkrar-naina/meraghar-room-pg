@@ -23,6 +23,15 @@ export function rateLimited(key: string, max: number, windowMs: number): boolean
   return false;
 }
 
+/**
+ * Forgets a key's history. Call this after a *successful* attempt, otherwise a
+ * user who logs in correctly `max` times in a row locks themselves out - the
+ * limiter is meant to throttle failures, not successes.
+ */
+export function clearRateLimit(key: string): void {
+  hits.delete(key);
+}
+
 export function clientIp(req: Request): string {
   const fwd = req.headers.get("x-forwarded-for");
   if (fwd) return fwd.split(",")[0].trim();
